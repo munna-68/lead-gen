@@ -1,75 +1,60 @@
 'use client';
 
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
-import { StatusBadge } from './StatusBadge';
-import { QualityBadge } from './QualityBadge';
-import { MessageDots } from './MessageDots';
+import { QualityBadge } from '@/components/QualityBadge';
+import { StatusPill } from '@/components/StatusPill';
+import { MessagePips } from '@/components/MessagePips';
 
-interface LeadCardProps {
+export function LeadCard({
+  lead,
+  onClick,
+  selected,
+}: {
   lead: Lead;
-  index: number;
   onClick: () => void;
   selected?: boolean;
-}
-
-export function LeadCard({ lead, index, onClick, selected }: LeadCardProps) {
-  const sentCount =
-    (lead.msg1_sent ? 1 : 0) +
-    (lead.msg2_sent ? 1 : 0) +
-    (lead.msg3_sent ? 1 : 0);
-
+}) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={clsx(
-        'group relative w-full overflow-hidden border bg-ink-1 text-left transition-all',
-        'animate-fade-up opacity-0',
+      className={cn(
+        'group flex w-full flex-col gap-3 rounded-lg border bg-surface p-5 text-left transition-colors',
         selected
-          ? 'border-amber/50 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.15)]'
-          : 'border-ink-3 hover:border-ink-5 hover:bg-ink-2'
+          ? 'border-accent'
+          : 'border-border hover:border-foreground/30'
       )}
-      style={{ animationDelay: `${Math.min(index, 24) * 22}ms` }}
     >
-      {selected && (
-        <span className="absolute left-0 top-0 h-full w-px bg-amber" />
-      )}
-
-      <div className="flex items-start justify-between gap-3 px-4 pt-3.5">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
-            <h3 className="truncate font-display text-base text-fog-1">
-              {lead.business_name || lead.name}
-            </h3>
-            {lead.business_name && (
-              <span className="truncate font-mono text-2xs uppercase tracking-extra-wide text-fog-4">
-                {lead.name}
-              </span>
-            )}
+          <div className="truncate text-[16px] font-semibold text-foreground">
+            {lead.business_name || lead.name}
           </div>
-          <p className="mt-0.5 truncate font-mono text-2xs uppercase tracking-extra-wide text-fog-3">
-            {lead.niche}
-            <span className="mx-1.5 text-fog-5">·</span>
-            {lead.location}
-          </p>
+          {lead.business_name && (
+            <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
+              {lead.name}
+            </div>
+          )}
         </div>
         <QualityBadge quality={lead.lead_quality} />
       </div>
 
+      <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
+        {lead.niche || '—'}
+        <span className="mx-1.5 text-border">·</span>
+        {lead.location || '—'}
+      </div>
+
       {lead.post_context && (
-        <p className="mt-3 line-clamp-2 px-4 text-xs leading-relaxed text-fog-3">
+        <p className="line-clamp-2 text-[13px] leading-relaxed text-foreground/80">
           {lead.post_context}
         </p>
       )}
 
-      <div className="mt-4 flex items-center justify-between border-t border-ink-3 px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <StatusBadge status={lead.status} />
-          <span className="font-mono text-[10px] text-fog-4">
-            {sentCount}/3 sent
-          </span>
-        </div>
-        <MessageDots lead={lead} />
+      <div className="mt-1 flex items-center justify-between pt-1">
+        <StatusPill status={lead.status} />
+        <MessagePips lead={lead} />
       </div>
     </button>
   );

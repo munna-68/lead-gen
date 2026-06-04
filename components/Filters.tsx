@@ -1,6 +1,10 @@
 'use client';
 
-import { clsx } from 'clsx';
+import * as React from 'react';
+import { Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import type { LeadQuality, LeadStatus } from '@/lib/types';
 
 interface FiltersProps {
@@ -8,10 +12,10 @@ interface FiltersProps {
   onSearchChange: (v: string) => void;
   status: LeadStatus | '';
   onStatusChange: (v: LeadStatus | '') => void;
+  quality: LeadQuality | '';
+  onQualityChange: (v: LeadQuality | '') => void;
   niche: string;
   onNicheChange: (v: string) => void;
-  leadQuality: LeadQuality | '';
-  onLeadQualityChange: (v: LeadQuality | '') => void;
   sourceGroup: string;
   onSourceGroupChange: (v: string) => void;
   niches: string[];
@@ -20,147 +24,121 @@ interface FiltersProps {
   filteredCount: number;
 }
 
-const STATUSES: { value: LeadStatus | ''; label: string }[] = [
-  { value: '', label: 'all' },
-  { value: 'new', label: 'new' },
-  { value: 'contacted', label: 'contacted' },
-  { value: 'engaged', label: 'engaged' },
-  { value: 'pitched', label: 'pitched' },
-  { value: 'no_response', label: 'no response' },
-  { value: 'closed', label: 'closed' },
-  { value: 'dead', label: 'dead' },
+const STATUS_OPTIONS: { value: LeadStatus | ''; label: string }[] = [
+  { value: '', label: 'All statuses' },
+  { value: 'new', label: 'New' },
+  { value: 'contacted', label: 'Contacted' },
+  { value: 'engaged', label: 'Engaged' },
+  { value: 'pitched', label: 'Pitched' },
+  { value: 'no_response', label: 'No response' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'dead', label: 'Dead' },
+];
+
+const QUALITY_OPTIONS: { value: LeadQuality | ''; label: string }[] = [
+  { value: '', label: 'All qualities' },
+  { value: 'warm', label: 'Warm' },
+  { value: 'cold', label: 'Cold' },
 ];
 
 export function Filters(props: FiltersProps) {
+  const active =
+    Boolean(props.search) ||
+    Boolean(props.status) ||
+    Boolean(props.quality) ||
+    Boolean(props.niche) ||
+    Boolean(props.sourceGroup);
+
+  const reset = () => {
+    props.onSearchChange('');
+    props.onStatusChange('');
+    props.onQualityChange('');
+    props.onNicheChange('');
+    props.onSourceGroupChange('');
+  };
+
   return (
-    <div className="border border-ink-3 bg-ink-1">
-      <div className="grid grid-cols-1 gap-px border-b border-ink-3 bg-ink-3 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="bg-ink-1">
-          <label className="block px-4 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-            search
-          </label>
-          <input
+    <div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
             value={props.search}
             onChange={(e) => props.onSearchChange(e.target.value)}
-            placeholder="name or business…"
-            className="w-full bg-transparent px-4 pb-3 font-sans text-sm text-fog-1 placeholder:italic placeholder:text-fog-4 focus:outline-none"
+            placeholder="Search by name or business…"
+            className="h-9 pl-8"
           />
         </div>
 
-        <FilterSelect
-          label="status"
+        <Select
           value={props.status}
-          onChange={(v) => props.onStatusChange(v as LeadStatus | '')}
-          options={STATUSES}
-        />
-        <FilterSelect
-          label="quality"
-          value={props.leadQuality}
-          onChange={(v) => props.onLeadQualityChange(v as LeadQuality | '')}
-          options={[
-            { value: '', label: 'all' },
-            { value: 'warm', label: 'warm' },
-            { value: 'cold', label: 'cold' },
-          ]}
-        />
-
-        <div className="bg-ink-1">
-          <label className="block px-4 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-            niche
-          </label>
-          <select
-            value={props.niche}
-            onChange={(e) => props.onNicheChange(e.target.value)}
-            className="w-full appearance-none bg-transparent px-4 pb-3 font-sans text-sm text-fog-1 focus:outline-none"
-          >
-            <option value="" className="bg-ink-2">
-              all niches
+          onChange={(e) => props.onStatusChange(e.target.value as LeadStatus | '')}
+        >
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value || 'all'} value={o.value}>
+              {o.label}
             </option>
-            {props.niches.map((n) => (
-              <option key={n} value={n} className="bg-ink-2">
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
+          ))}
+        </Select>
 
-        <div className="bg-ink-1">
-          <label className="block px-4 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-            source group
-          </label>
-          <select
-            value={props.sourceGroup}
-            onChange={(e) => props.onSourceGroupChange(e.target.value)}
-            className="w-full appearance-none bg-transparent px-4 pb-3 font-sans text-sm text-fog-1 focus:outline-none"
-          >
-            <option value="" className="bg-ink-2">
-              all sources
+        <Select
+          value={props.quality}
+          onChange={(e) => props.onQualityChange(e.target.value as LeadQuality | '')}
+        >
+          {QUALITY_OPTIONS.map((o) => (
+            <option key={o.value || 'all'} value={o.value}>
+              {o.label}
             </option>
-            {props.sources.map((s) => (
-              <option key={s} value={s} className="bg-ink-2">
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+          ))}
+        </Select>
+
+        <Select
+          value={props.niche}
+          onChange={(e) => props.onNicheChange(e.target.value)}
+        >
+          <option value="">All niches</option>
+          {props.niches.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={props.sourceGroup}
+          onChange={(e) => props.onSourceGroupChange(e.target.value)}
+        >
+          <option value="">All sources</option>
+          {props.sources.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </Select>
       </div>
 
-      <div className="flex items-center justify-between px-4 py-2.5 font-mono text-2xs uppercase tracking-extra-wide text-fog-3">
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-amber" />
-          <span>
-            showing{' '}
-            <span className="text-fog-1">{props.filteredCount.toString().padStart(2, '0')}</span>{' '}
-            of{' '}
-            <span className="text-fog-1">{props.totalCount.toString().padStart(2, '0')}</span>
-          </span>
+      <div className="mt-3 flex items-center justify-between">
+        <div className="font-num text-[12px] text-muted-foreground">
+          Showing{' '}
+          <span className="text-foreground">{props.filteredCount.toString().padStart(2, '0')}</span>{' '}
+          of{' '}
+          <span className="text-foreground">{props.totalCount.toString().padStart(2, '0')}</span>
         </div>
-        {props.filteredCount !== props.totalCount && (
+        {active && (
           <button
-            onClick={() => {
-              props.onSearchChange('');
-              props.onStatusChange('');
-              props.onNicheChange('');
-              props.onLeadQualityChange('');
-              props.onSourceGroupChange('');
-            }}
-            className="text-amber transition-opacity hover:opacity-80"
+            type="button"
+            onClick={reset}
+            className={cn(
+              'text-[12px] text-muted-foreground transition-colors hover:text-foreground'
+            )}
           >
-            reset filters
+            Reset filters
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-function FilterSelect<T extends string>({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: T | '';
-  onChange: (v: T | '') => void;
-  options: { value: T | ''; label: string }[];
-}) {
-  return (
-    <div className="bg-ink-1">
-      <label className="block px-4 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-        {label}
-      </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as T | '')}
-        className="w-full appearance-none bg-transparent px-4 pb-3 font-sans text-sm text-fog-1 focus:outline-none"
-      >
-        {options.map((o) => (
-          <option key={o.value || 'all'} value={o.value} className="bg-ink-2">
-            {o.label}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

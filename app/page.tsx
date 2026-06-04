@@ -1,16 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { motion } from 'motion/react';
 import Link from 'next/link';
+import { Plus, Inbox } from 'lucide-react';
 import type { Lead, LeadQuality, LeadStatus, StatsResponse } from '@/lib/types';
-import { LeadCard } from '@/components/LeadCard';
-import { LeadDetail } from '@/components/LeadDetail';
+import { PageHeader } from '@/components/PageHeader';
 import { StatsRow } from '@/components/StatsRow';
 import { Filters } from '@/components/Filters';
-import { EmptyState } from '@/components/EmptyState';
+import { LeadCard } from '@/components/LeadCard';
+import { LeadDetail } from '@/components/LeadDetail';
 
-export default function Dashboard() {
+const ACCENT_OUTLINE_LINK =
+  'inline-flex h-9 items-center gap-1.5 rounded-md border border-accent px-4 text-[13px] font-medium text-accent transition-colors hover:bg-accent hover:text-accent-foreground';
+
+export default function PipelinePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,16 +21,16 @@ export default function Dashboard() {
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<LeadStatus | ''>('');
+  const [quality, setQuality] = useState<LeadQuality | ''>('');
   const [niche, setNiche] = useState('');
-  const [leadQuality, setLeadQuality] = useState<LeadQuality | ''>('');
   const [sourceGroup, setSourceGroup] = useState('');
 
   const fetchLeads = useCallback(async () => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (status) params.set('status', status);
+    if (quality) params.set('lead_quality', quality);
     if (niche) params.set('niche', niche);
-    if (leadQuality) params.set('lead_quality', leadQuality);
     if (sourceGroup) params.set('source_group', sourceGroup);
 
     const res = await fetch(`/api/leads?${params.toString()}`);
@@ -35,7 +38,7 @@ export default function Dashboard() {
       const data = await res.json();
       setLeads(data.leads);
     }
-  }, [search, status, niche, leadQuality, sourceGroup]);
+  }, [search, status, quality, niche, sourceGroup]);
 
   const fetchStats = useCallback(async () => {
     const res = await fetch('/api/stats');
@@ -47,15 +50,13 @@ export default function Dashboard() {
     Promise.all([fetchLeads(), fetchStats()]).finally(() => setLoading(false));
   }, [fetchLeads, fetchStats]);
 
-  const allLeads = useMemo(() => leads, [leads]);
-
   const niches = useMemo(
-    () => Array.from(new Set(allLeads.map((l) => l.niche).filter(Boolean))).sort(),
-    [allLeads]
+    () => Array.from(new Set(leads.map((l) => l.niche).filter(Boolean))).sort(),
+    [leads]
   );
   const sources = useMemo(
-    () => Array.from(new Set(allLeads.map((l) => l.source_group).filter(Boolean))).sort(),
-    [allLeads]
+    () => Array.from(new Set(leads.map((l) => l.source_group).filter(Boolean))).sort(),
+    [leads]
   );
 
   const handleUpdate = async (id: string, updates: Partial<Lead>) => {
@@ -72,30 +73,19 @@ export default function Dashboard() {
   };
 
   const selected = selectedId ? leads.find((l) => l.id === selectedId) || null : null;
+  const hasFilters = Boolean(search || status || quality || niche || sourceGroup);
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
-      {/* Title bar */}
-      <header className="mb-8 flex flex-col gap-4 border-b border-ink-3 pb-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="font-mono text-2xs uppercase tracking-extra-wide text-fog-4">
-            pipeline · live
-          </div>
-          <h1 className="mt-2 font-display text-5xl italic leading-none tracking-tightest text-fog-1 md:text-6xl">
-            Your <span className="text-amber">outbound</span> desk.
-          </h1>
-          <p className="mt-3 max-w-lg font-sans text-sm text-fog-3">
-            Cold DMs, tracked. Three-message sequences, observed. No leads falling through the cracks.
-          </p>
-        </div>
-        <Link
-          href="/import"
-          className="group inline-flex items-center gap-2 self-start border border-amber/40 bg-amber/[0.06] px-4 py-2.5 font-mono text-2xs uppercase tracking-extra-wide text-amber transition-colors hover:bg-amber/[0.12]"
-        >
-          <span>+ import leads</span>
-          <span className="transition-transform group-hover:translate-x-1">→</span>
-        </Link>
-      </header>
+    <div className="mx-auto w-full max-w-[1200px] px-10 py-8">
+      <PageHeader
+        title="Pipeline"
+        subtitle="Your active Facebook outreach. Filter, click into a lead, and track every message in the sequence."
+        action={
+          <Link href="/import" className={ACCENT_OUTLINE_LINK}>
+            <Plus className="h-3.5 w-3.5" /> Import Leads
+          </Link>
+        }
+      />
 
       <div className="mb-8">
         <StatsRow data={stats} />
@@ -107,10 +97,10 @@ export default function Dashboard() {
           onSearchChange={setSearch}
           status={status}
           onStatusChange={setStatus}
+          quality={quality}
+          onQualityChange={setQuality}
           niche={niche}
           onNicheChange={setNiche}
-          leadQuality={leadQuality}
-          onLeadQualityChange={setLeadQuality}
           sourceGroup={sourceGroup}
           onSourceGroupChange={setSourceGroup}
           niches={niches}
@@ -120,57 +110,43 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Lead grid */}
       {loading ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-40 animate-pulse border border-ink-3 bg-ink-1"
-              style={{ animationDelay: `${i * 80}ms` }}
+              className="h-[176px] animate-pulse rounded-lg border border-border bg-surface"
+              style={{ animationDelay: `${i * 60}ms` }}
             />
           ))}
         </div>
       ) : leads.length === 0 ? (
-        <EmptyState
-          title="No leads to show"
-          description={
-            search || status || niche || leadQuality || sourceGroup
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface px-6 py-20 text-center">
+          <Inbox className="h-8 w-8 text-muted-foreground" aria-hidden />
+          <h3 className="mt-4 text-[16px] font-semibold text-foreground">No leads to show</h3>
+          <p className="mt-1.5 max-w-sm text-[13px] text-muted-foreground">
+            {hasFilters
               ? 'Try clearing your filters, or import a fresh batch of leads.'
-              : 'Paste the JSON output from your extraction step to get started.'
-          }
-          action={
-            <Link
-              href="/import"
-              className="inline-flex items-center gap-2 border border-amber/40 bg-amber/[0.06] px-4 py-2.5 font-mono text-2xs uppercase tracking-extra-wide text-amber transition-colors hover:bg-amber/[0.12]"
-            >
-              <span>go to import</span>
-              <span>→</span>
-            </Link>
-          }
-        />
+              : 'Paste the JSON output from your extraction step to get started.'}
+          </p>
+          <Link href="/import" className={`mt-5 ${ACCENT_OUTLINE_LINK}`}>
+            <Plus className="h-3.5 w-3.5" /> Go to import
+          </Link>
+        </div>
       ) : (
-        <motion.div
-          layout
-          className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
-        >
-          {leads.map((lead, i) => (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {leads.map((lead) => (
             <LeadCard
               key={lead.id}
               lead={lead}
-              index={i}
               selected={lead.id === selectedId}
               onClick={() => setSelectedId(lead.id)}
             />
           ))}
-        </motion.div>
+        </div>
       )}
 
-      <LeadDetail
-        lead={selected}
-        onClose={() => setSelectedId(null)}
-        onUpdate={handleUpdate}
-      />
+      <LeadDetail lead={selected} onClose={() => setSelectedId(null)} onUpdate={handleUpdate} />
     </div>
   );
 }

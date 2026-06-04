@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'motion/react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AlertCircle, Check } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
+import { Textarea } from '@/components/ui/Textarea';
 import type { ImportResult } from '@/lib/types';
 
 const SAMPLE = `[
@@ -22,63 +24,56 @@ const SAMPLE = `[
   },
   {
     "name": "Tariq Holmes",
-    "business_name": "Holmes Home Repair",
-    "niche": "contractor",
-    "location": "Atlanta, GA",
-    "facebook_url": null,
-    "has_website": false,
-    "post_context": null,
-    "message_1_hook": null,
-    "lead_quality": "cold",
-    "source_group": "ATL Trades",
     "skip_reason": "no post context"
   }
 ]`;
 
 export default function ImportPage() {
   const [raw, setRaw] = useState('');
-  const [parsing, setParsing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [parseError, setParseError] = useState<string | null>(null);
-  const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
 
-  const handleParse = () => {
-    setParseError(null);
-    setPreviewCount(null);
-    if (!raw.trim()) {
-      setParseError('Paste the JSON array first.');
-      return;
-    }
-    setParsing(true);
+  const previewCount = useMemo(() => {
+    if (!raw.trim()) return null;
     try {
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        setParseError('Top-level value must be an array.');
-        return;
-      }
-      setPreviewCount(parsed.length);
-    } catch (e) {
-      setParseError(e instanceof Error ? e.message : 'Invalid JSON');
-    } finally {
-      setParsing(false);
+      if (Array.isArray(parsed)) return parsed.length;
+      if (parsed && Array.isArray(parsed.leads)) return parsed.leads.length;
+      return null;
+    } catch {
+      return null;
     }
-  };
+  }, [raw]);
 
   const handleImport = async () => {
-    setParseError(null);
+    setError(null);
     setResult(null);
     if (!raw.trim()) {
-      setParseError('Paste the JSON array first.');
+      setError('Paste the JSON array first.');
       return;
     }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Invalid JSON');
+      return;
+    }
+
+    const leads = Array.isArray(parsed) ? parsed : (parsed as { leads?: unknown[] })?.leads;
+    if (!Array.isArray(leads)) {
+      setError('Top-level value must be a JSON array (or { leads: [...] }).');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const parsed = JSON.parse(raw);
       const res = await fetch('/api/leads/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leads: parsed }),
+        body: JSON.stringify({ leads }),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -86,218 +81,138 @@ export default function ImportPage() {
         try {
           const data = JSON.parse(text);
           msg = data.error || msg;
-          if (data.issues) {
-            const flat = data.issues.fieldErrors || {};
-            const first = Object.entries(flat).find(([, v]) =>
-              Array.isArray(v) && v.length > 0
-            );
-            if (first) msg += ` — ${first[0]}: ${(first[1] as string[])[0]}`;
-          }
         } catch {
-          msg = text ? `HTTP ${res.status} — ${text.slice(0, 120)}` : `HTTP ${res.status}`;
+          msg = text ? `HTTP ${res.status} — ${text.slice(0, 120)}` : msg;
         }
-        setParseError(msg);
+        setError(msg);
         return;
       }
       const data: ImportResult = await res.json();
       setResult(data);
     } catch (e) {
-      setParseError(e instanceof Error ? e.message : 'Invalid JSON');
+      setError(e instanceof Error ? e.message : 'Import failed');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const reset = () => {
+  const handleClear = () => {
     setRaw('');
+    setError(null);
     setResult(null);
-    setParseError(null);
-    setPreviewCount(null);
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-8 md:px-10 md:py-12">
-      <header className="mb-8 border-b border-ink-3 pb-6">
-        <div className="flex items-center gap-3 font-mono text-2xs uppercase tracking-extra-wide text-fog-4">
-          <Link href="/" className="hover:text-fog-1">
-            ← pipeline
-          </Link>
-          <span className="text-fog-5">/</span>
-          <span>import</span>
-        </div>
-        <h1 className="mt-3 font-display text-5xl italic leading-none tracking-tightest text-fog-1 md:text-6xl">
-          Paste. <span className="text-amber">Ingest.</span> Begin.
-        </h1>
-        <p className="mt-3 max-w-2xl font-sans text-sm text-fog-3">
-          Drop the JSON array from your AI extraction step. We&apos;ll filter skipped
-          entries, de-dupe against your existing database, and import the rest.
-        </p>
-      </header>
+    <div className="mx-auto w-full max-w-[1000px] px-10 py-8">
+      <PageHeader
+        title="Import Leads"
+        subtitle="Paste the JSON array from Claude or ChatGPT below."
+      />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
-        <div className="border border-ink-3 bg-ink-1">
-          <div className="flex items-center justify-between border-b border-ink-3 px-4 py-2.5">
-            <div className="flex items-center gap-3 font-mono text-2xs uppercase tracking-extra-wide text-fog-4">
-              <span>leads.json</span>
-              <span className="text-fog-5">·</span>
-              <span>{raw.length.toString().padStart(4, '0')} chars</span>
-            </div>
-            <div className="flex items-center gap-3 font-mono text-2xs uppercase tracking-extra-wide text-fog-4">
-              {previewCount !== null && (
-                <span className="text-amber">
-                  {previewCount.toString().padStart(2, '0')} rows
+      <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+          <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
+            <span>leads.json</span>
+            <span className="mx-2 text-border">·</span>
+            <span>{raw.length.toString().padStart(4, '0')} chars</span>
+            {previewCount !== null && (
+              <>
+                <span className="mx-2 text-border">·</span>
+                <span className="text-accent">
+                  {previewCount.toString().padStart(2, '0')} entries
                 </span>
-              )}
-              <button
-                onClick={() => setRaw(SAMPLE)}
-                className="text-amber transition-opacity hover:opacity-80"
-              >
-                load sample
-              </button>
-            </div>
+              </>
+            )}
           </div>
-
-          <textarea
-            value={raw}
-            onChange={(e) => {
-              setRaw(e.target.value);
-              setPreviewCount(null);
-              setResult(null);
-              setParseError(null);
-            }}
-            placeholder='[{"name": "...", "niche": "...", ...}]'
-            spellCheck={false}
-            className="block h-[420px] w-full resize-none bg-ink-2 p-5 font-mono text-sm leading-relaxed text-fog-1 placeholder:italic placeholder:text-fog-4 focus:outline-none"
-          />
-
-          {parseError && (
-            <div className="border-t border-status-no_response/30 bg-status-no_response/[0.06] px-4 py-2.5 font-mono text-2xs uppercase tracking-extra-wide text-status-no_response">
-              ⚠ {parseError}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-3 border-t border-ink-3 px-4 py-3">
+          <div className="flex items-center gap-3 font-num text-2xs uppercase tracking-[0.08em]">
+            {raw.trim() && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Clear
+              </button>
+            )}
             <button
-              onClick={reset}
-              className="font-mono text-2xs uppercase tracking-extra-wide text-fog-3 transition-colors hover:text-fog-1"
+              type="button"
+              onClick={() => setRaw(SAMPLE)}
+              className="text-accent transition-opacity hover:opacity-80"
             >
-              clear
+              Load sample
             </button>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleParse}
-                disabled={parsing || !raw.trim()}
-                className="border border-ink-4 bg-ink-2 px-4 py-2 font-mono text-2xs uppercase tracking-extra-wide text-fog-1 transition-colors hover:border-ink-5 disabled:opacity-40"
-              >
-                validate
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={submitting || !raw.trim()}
-                className="border border-amber/40 bg-amber/[0.08] px-4 py-2 font-mono text-2xs uppercase tracking-extra-wide text-amber transition-colors hover:bg-amber/[0.16] disabled:opacity-40"
-              >
-                {submitting ? 'importing…' : 'import →'}
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Sidebar: schema hint + result */}
-        <aside className="space-y-4">
-          <div className="border border-ink-3 bg-ink-1">
-            <div className="border-b border-ink-3 px-4 py-2.5 font-mono text-2xs uppercase tracking-extra-wide text-fog-4">
-              expected fields
-            </div>
-            <ul className="divide-y divide-ink-3 font-mono text-xs">
-              {[
-                ['name', 'string · required'],
-                ['business_name', 'string?'],
-                ['niche', 'string'],
-                ['location', 'string'],
-                ['facebook_url', 'string?'],
-                ['website', 'string?'],
-                ['has_website', 'boolean?'],
-                ['post_context', 'string'],
-                ['message_1_hook', 'string'],
-                ['lead_quality', 'warm | cold'],
-                ['source_group', 'string'],
-                ['skip_reason', 'string? (skips lead)'],
-              ].map(([k, v]) => (
-                <li
-                  key={k}
-                  className="flex items-center justify-between gap-3 px-4 py-1.5"
-                >
-                  <span className="text-fog-1">{k}</span>
-                  <span className="text-2xs uppercase tracking-extra-wide text-fog-4">
-                    {v}
-                  </span>
-                </li>
-              ))}
-            </ul>
+        <Textarea
+          value={raw}
+          onChange={(e) => {
+            setRaw(e.target.value);
+            setError(null);
+            setResult(null);
+          }}
+          placeholder='[{"name": "...", "niche": "...", ...}]'
+          spellCheck={false}
+          className="min-h-[320px] resize-y rounded-none border-0 bg-surface-2 font-num text-[13px] leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+
+        {error && (
+          <div className="flex items-start gap-2 border-t border-border bg-danger/5 px-4 py-2.5 text-[12px] text-danger">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>{error}</span>
           </div>
+        )}
 
-          {result && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="border border-amber/30 bg-amber/[0.04]"
-            >
-              <div className="border-b border-amber/20 px-4 py-2.5 font-mono text-2xs uppercase tracking-extra-wide text-amber">
-                import complete
-              </div>
-              <div className="grid grid-cols-3 divide-x divide-ink-3">
-                <div className="px-4 py-3">
-                  <div className="font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-                    added
-                  </div>
-                  <div className="mt-1 font-display text-3xl italic tracking-tightest text-amber">
-                    {result.inserted.toString().padStart(2, '0')}
-                  </div>
-                </div>
-                <div className="px-4 py-3">
-                  <div className="font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-                    skipped
-                  </div>
-                  <div className="mt-1 font-display text-3xl tracking-tightest text-fog-1">
-                    {result.skipped.toString().padStart(2, '0')}
-                  </div>
-                </div>
-                <div className="px-4 py-3">
-                  <div className="font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-                    dupes
-                  </div>
-                  <div className="mt-1 font-display text-3xl tracking-tightest text-fog-1">
-                    {result.duplicates.toString().padStart(2, '0')}
-                  </div>
-                </div>
-              </div>
-              <div className="border-t border-ink-3 px-4 py-3">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-2 font-mono text-2xs uppercase tracking-extra-wide text-amber transition-opacity hover:opacity-80"
-                >
-                  view pipeline →
-                </Link>
-              </div>
-            </motion.div>
-          )}
-
-          {result?.errors && result.errors.length > 0 && (
-            <div className="border border-status-no_response/30 bg-status-no_response/[0.04]">
-              <div className="border-b border-status-no_response/20 px-4 py-2.5 font-mono text-2xs uppercase tracking-extra-wide text-status-no_response">
-                errors · {result.errors.length}
-              </div>
-              <ul className="divide-y divide-status-no_response/20 font-mono text-xs text-fog-2">
-                {result.errors.map((e, i) => (
-                  <li key={i} className="px-4 py-1.5">
-                    {e}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </aside>
+        <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={submitting || !raw.trim()}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-4 text-[13px] font-medium text-accent-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting
+              ? 'Importing…'
+              : previewCount !== null
+                ? `Import ${previewCount.toString().padStart(2, '0')} entries`
+                : 'Import entries'}
+          </button>
+        </div>
       </div>
+
+      {result && (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-border bg-surface px-5 py-4 text-[14px] text-foreground">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-success/10 text-success">
+            <Check className="h-3.5 w-3.5" />
+          </span>
+          <span>
+            <span className="font-semibold text-success">
+              {result.inserted.toString().padStart(2, '0')} leads imported
+            </span>
+            <span className="mx-2 text-border">·</span>
+            <span className="text-muted-foreground">
+              {result.skipped.toString().padStart(2, '0')} skipped
+            </span>
+            <span className="mx-2 text-border">·</span>
+            <span className="text-muted-foreground">
+              {result.duplicates.toString().padStart(2, '0')} duplicates
+            </span>
+            {result.errors.length > 0 && (
+              <>
+                <span className="mx-2 text-border">·</span>
+                <span className="text-danger">
+                  {result.errors.length.toString().padStart(2, '0')} errors
+                </span>
+              </>
+            )}
+          </span>
+          <Link
+            href="/"
+            className="ml-auto text-[13px] font-medium text-accent hover:underline"
+          >
+            View pipeline →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

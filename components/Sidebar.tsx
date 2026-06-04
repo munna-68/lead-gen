@@ -2,37 +2,35 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 const NAV = [
-  { href: '/', label: 'Pipeline', code: '01' },
-  { href: '/prompt', label: 'Prompt', code: '02' },
-  { href: '/import', label: 'Import', code: '03' },
-  { href: '/skipped', label: 'Skipped', code: '04' },
+  { href: '/', label: 'Pipeline' },
+  { href: '/prompt', label: 'Prompt' },
+  { href: '/import', label: 'Import' },
+  { href: '/skipped', label: 'Skipped' },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col justify-between border-r border-ink-3 bg-ink-1 px-5 py-6 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-[240px] shrink-0 flex-col justify-between border-r border-border bg-background md:flex">
       <div>
-        <Link href="/" className="group block">
-          <div className="flex items-baseline gap-2">
-            <span className="font-display text-2xl italic tracking-tightest text-fog-1">
-              Lead
-            </span>
-            <span className="font-display text-2xl not-italic tracking-tightest text-amber">
-              Flow
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-            <span className="h-1 w-1 animate-pulse-soft rounded-full bg-amber" />
-            personal crm · v0.1
-          </div>
-        </Link>
+        <div className="flex items-start justify-between px-6 pt-6">
+          <Link href="/" className="group block">
+            <div className="text-[15px] font-semibold tracking-tight text-foreground">
+              LeadFlow
+            </div>
+            <div className="mt-0.5 font-num text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+              v0.1 · personal crm
+            </div>
+          </Link>
+          <ThemeToggle />
+        </div>
 
-        <nav className="mt-12 space-y-px">
+        <nav className="mt-10 px-3">
           {NAV.map((item) => {
             const active =
               item.href === '/'
@@ -42,36 +40,34 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={clsx(
-                  'group flex items-center justify-between border-l py-2 pl-3 pr-2 font-mono text-2xs uppercase tracking-extra-wide transition-colors',
+                className={cn(
+                  'relative block py-1.5 pl-4 pr-3 text-[13px] transition-colors',
                   active
-                    ? 'border-amber text-fog-1'
-                    : 'border-transparent text-fog-3 hover:border-fog-5 hover:text-fog-1'
+                    ? 'font-medium text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <span className="flex items-center gap-3">
-                  <span className={clsx('text-[10px]', active ? 'text-amber' : 'text-fog-4')}>
-                    {item.code}
-                  </span>
-                  <span className="font-sans text-sm normal-case tracking-normal">
-                    {item.label}
-                  </span>
-                </span>
-                {active && <span className="text-amber">·</span>}
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-accent"
+                  />
+                )}
+                {item.label}
               </Link>
             );
           })}
         </nav>
       </div>
 
-      <div className="font-mono text-[10px] uppercase tracking-extra-wide text-fog-5">
-        <div className="mb-2 flex items-center justify-between">
-          <span>build</span>
-          <span className="text-fog-3">2026.06</span>
-        </div>
+      <div className="px-6 pb-6 font-num text-[11px] leading-relaxed text-muted-foreground">
         <div className="flex items-center justify-between">
+          <span>build</span>
+          <span>2026.06</span>
+        </div>
+        <div className="mt-1 flex items-center justify-between">
           <span>env</span>
-          <span className="text-amber">vercel · pg</span>
+          <span>VERCEL · PG</span>
         </div>
       </div>
     </aside>

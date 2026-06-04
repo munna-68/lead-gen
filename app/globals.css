@@ -2,93 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
+@layer base {
+  :root {
+    --background: 0 0% 98%;          /* #FAFAFA */
+    --foreground: 220 14% 11%;      /* #111827 */
+    --surface: 0 0% 100%;           /* #FFFFFF */
+    --surface-2: 220 14% 96%;       /* #F3F4F6 */
+    --border: 220 13% 91%;          /* #E5E7EB */
+    --input: 220 13% 91%;           /* #E5E7EB */
+    --ring: 199 89% 48%;            /* #0EA5E9 */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%; /* #6B7280 */
+    --accent: 199 89% 48%;          /* #0EA5E9 */
+    --accent-foreground: 0 0% 100%;
+    --accent-soft: 199 95% 97%;     /* #F0F9FF */
+    --success: 160 84% 39%;         /* #10B981 */
+    --warning: 38 92% 50%;          /* #F59E0B */
+    --danger: 0 84% 60%;            /* #EF4444 */
+    --status-new: 220 9% 46%;       /* #6B7280 gray */
+    --status-contacted: 199 89% 48%; /* #0EA5E9 sky */
+    --status-engaged: 187 92% 43%;  /* #06B6D4 cyan */
+    --status-pitched: 38 92% 50%;   /* #F59E0B amber */
+    --status-no-response: 215 16% 47%; /* #64748B slate */
+    --status-closed: 160 84% 39%;   /* #10B981 green */
+    --status-dead: 0 84% 60%;       /* #EF4444 red */
+  }
+
+  .dark {
+    --background: 0 0% 4%;          /* #0A0A0A */
+    --foreground: 210 20% 98%;     /* #F9FAFB */
+    --surface: 0 0% 7%;            /* #111111 */
+    --surface-2: 0 0% 9%;          /* #161616 */
+    --border: 0 0% 12%;            /* #1F1F1F */
+    --input: 0 0% 12%;             /* #1F1F1F */
+    --ring: 188 86% 53%;            /* #22D3EE */
+    --muted: 0 0% 9%;
+    --muted-foreground: 220 9% 64%; /* #9CA3AF */
+    --accent: 188 86% 53%;          /* #22D3EE */
+    --accent-foreground: 0 0% 4%;
+    --accent-soft: 188 86% 14%;
+    --success: 160 84% 39%;
+    --warning: 38 92% 50%;
+    --danger: 0 84% 60%;
+    --status-new: 220 9% 64%;
+    --status-contacted: 188 86% 53%;
+    --status-engaged: 188 86% 53%;
+    --status-pitched: 38 92% 50%;
+    --status-no-response: 215 16% 65%;
+    --status-closed: 160 84% 39%;
+    --status-dead: 0 84% 60%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html,
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'ss01', 'cv11', 'calt';
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+  }
+
+  body {
+    color-scheme: light;
+  }
+  html.dark body {
+    color-scheme: dark;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 5px;
+    border: 2px solid hsl(var(--background));
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  ::selection {
+    background: hsl(var(--accent) / 0.2);
+    color: hsl(var(--foreground));
+  }
+
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
-html,
-body {
-  background-color: #0a0a0a;
-  color: #ededed;
-  font-feature-settings: 'ss01', 'cv11', 'calt';
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-body {
-  background-image:
-    radial-gradient(1200px 600px at 90% -10%, rgba(245, 158, 11, 0.04), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(245, 158, 11, 0.025), transparent 60%);
-  background-attachment: fixed;
-}
-
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-::selection {
-  background: rgba(245, 158, 11, 0.3);
-  color: #ededed;
-}
-
-/* Scrollbar */
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-*::-webkit-scrollbar-thumb {
-  background: #1f1f1f;
-  border-radius: 0;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: #2a2a2a;
-}
-
-/* Subtle grain overlay using SVG noise */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.4;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-}
-
-/* App sits above the grain. The grain is body::before with z-index 0; the
-   app root establishes its own stacking context to layer above it. */
-#__app {
-  position: relative;
-  z-index: 1;
-  isolation: isolate;
-}
-
-/* Utility: monospace label rows */
-.label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--font-mono), monospace;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: #525252;
-}
-
-/* Cursor for interactive "copyable" elements */
-.cursor-copy {
-  cursor: copy;
-}
-
-/* Subtle hairline dashed separator */
-.hairline {
-  background-image: linear-gradient(to right, #1f1f1f 50%, transparent 50%);
-  background-size: 6px 1px;
-  background-repeat: repeat-x;
-  height: 1px;
+@layer utilities {
+  .font-num {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
 }

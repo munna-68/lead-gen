@@ -1,58 +1,47 @@
-'use client';
-
-import { motion } from 'motion/react';
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 import type { StatsResponse } from '@/lib/types';
 
-interface Stat {
+const TILES: Array<{
   key: keyof StatsResponse;
   label: string;
-  index: string;
   accent?: boolean;
-}
-
-const STATS: Stat[] = [
-  { key: 'total', label: 'Total leads', index: '00', accent: true },
-  { key: 'warm', label: 'Warm', index: '01' },
-  { key: 'contacted', label: 'Contacted', index: '02' },
-  { key: 'replied', label: 'Replied', index: '03' },
-  { key: 'pitched', label: 'Pitched', index: '04' },
-  { key: 'closed', label: 'Closed', index: '05' },
+}> = [
+  { key: 'total', label: 'Total Leads', accent: true },
+  { key: 'warm', label: 'Warm' },
+  { key: 'contacted', label: 'Contacted' },
+  { key: 'replied', label: 'Replied' },
+  { key: 'pitched', label: 'Pitched' },
+  { key: 'closed', label: 'Closed' },
 ];
 
-export function StatsRow({ data }: { data: StatsResponse | null }) {
+export function StatsRow({ data, className }: { data: StatsResponse | null; className?: string }) {
   return (
-    <div className="grid grid-cols-2 divide-x divide-ink-3 border border-ink-3 sm:grid-cols-3 lg:grid-cols-6">
-      {STATS.map((s, i) => {
-        const value = data?.[s.key] ?? 0;
+    <div
+      className={cn(
+        'grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3 lg:grid-cols-6',
+        className
+      )}
+    >
+      {TILES.map((t) => {
+        const value = data?.[t.key] ?? 0;
         return (
-          <motion.div
-            key={s.key}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.4 }}
-            className="group relative px-5 py-5 transition-colors hover:bg-ink-2"
+          <div
+            key={t.key}
+            className="bg-surface px-6 py-5"
           >
-            <div className="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-extra-wide text-fog-4">
-              <span>{s.label}</span>
-              <span className="text-fog-5">{s.index}</span>
+            <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
+              {t.label}
             </div>
             <div
-              className={
-                'mt-3 font-display text-5xl leading-none tracking-tightest ' +
-                (s.accent ? 'text-amber italic' : 'text-fog-1')
-              }
+              className={cn(
+                'mt-3 text-[32px] font-semibold leading-none tracking-tight font-num',
+                t.accent ? 'text-accent' : 'text-foreground'
+              )}
             >
               {value.toString().padStart(2, '0')}
             </div>
-            <div className="mt-2 h-px w-full bg-ink-3">
-              <div
-                className={
-                  'h-px transition-all ' + (s.accent ? 'bg-amber' : 'bg-fog-4')
-                }
-                style={{ width: s.key === 'total' ? '100%' : '0%' }}
-              />
-            </div>
-          </motion.div>
+          </div>
         );
       })}
     </div>
