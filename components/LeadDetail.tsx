@@ -250,23 +250,27 @@ export function LeadDetail({
   const hasWebsiteCurrent = hasWebsiteState(lead.has_website);
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-[60] flex">
       <div
         aria-hidden
         onClick={onClose}
-        className="flex-1 bg-foreground/30 backdrop-blur-[1px] animate-fade-in"
+        className="absolute inset-0 bg-foreground/30 backdrop-blur-[1px] animate-fade-in"
       />
       <aside
         role="dialog"
         aria-label={`Lead details for ${lead.business_name || lead.name}`}
-        className="flex h-full w-full max-w-[620px] flex-col border-l border-border bg-surface animate-slide-in-right"
+        className="relative ml-auto flex h-full w-full flex-col border-border bg-surface max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:top-[6vh] max-md:rounded-t-2xl max-md:border-t max-md:animate-slide-up md:ml-0 md:max-w-[620px] md:border-l md:animate-slide-in-right"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-border px-7 py-5">
+        <div
+          aria-hidden
+          className="absolute left-1/2 top-1.5 z-10 h-1 w-10 -translate-x-1/2 rounded-full bg-border md:hidden"
+        />
+        <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-7">
           <div className="min-w-0 flex-1">
             <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
               LEAD · {lead.id.slice(0, 8).toUpperCase()}
             </div>
-            <h2 className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-foreground">
+            <h2 className="mt-2 text-[24px] font-semibold leading-tight tracking-tight text-foreground sm:text-[28px]">
               {primaryName}
             </h2>
             {secondaryName && (
@@ -274,7 +278,7 @@ export function LeadDetail({
                 {secondaryName}
               </div>
             )}
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <QualityBadge quality={lead.lead_quality} />
               <StatusPill status={lead.status} />
             </div>
@@ -283,13 +287,13 @@ export function LeadDetail({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
         </header>
 
-        <div className="flex-1 space-y-7 overflow-y-auto px-7 py-6">
+        <div className="flex-1 space-y-7 overflow-y-auto px-5 py-6 sm:px-7 pb-safe">
           {/* BLOCK 1 — WHO IS THIS PERSON */}
           <section>
             <BlockHeader icon={User} eyebrow="Block 1" title="Who is this person" />

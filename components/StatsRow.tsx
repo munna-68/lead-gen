@@ -28,14 +28,14 @@ export function StatsRow({ data, className }: { data: StatsResponse | null; clas
         return (
           <div
             key={t.key}
-            className="bg-surface px-6 py-5"
+            className="bg-surface px-4 py-4 sm:px-5 sm:py-5"
           >
             <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
               {t.label}
             </div>
             <div
               className={cn(
-                'mt-3 text-[32px] font-semibold leading-none tracking-tight font-num',
+                'mt-2 text-[26px] font-semibold leading-none tracking-tight font-num sm:mt-3 sm:text-[32px]',
                 t.accent ? 'text-accent' : 'text-foreground'
               )}
             >

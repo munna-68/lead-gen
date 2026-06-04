@@ -71,8 +71,8 @@ export function Filters(props: FiltersProps) {
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_1fr]">
-        <div className="relative">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_1fr]">
+        <div className="relative col-span-2 sm:col-span-1">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
             aria-hidden

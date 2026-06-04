@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Check, Copy, ArrowRight } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { PageContainer } from '@/components/PageContainer';
 
 const EXTRACTION_PROMPT = `You are a lead extraction assistant. I will give you the raw HTML of a saved Facebook group page. Extract every post and return a JSON array of leads.
 
@@ -59,7 +60,7 @@ export default function PromptPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[960px] px-10 py-8">
+    <PageContainer width="sm">
       <PageHeader
         title="Extraction Prompt"
         subtitle="Save a Facebook group page with SingleFile, then paste the prompt + raw HTML into Claude or ChatGPT. Copy the resulting JSON into the Import page."
@@ -131,6 +132,6 @@ export default function PromptPage() {
           Go to Import <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
-    </div>
+    </PageContainer>
   );
 }

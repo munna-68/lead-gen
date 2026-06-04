@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { Sidebar } from '@/components/Sidebar';
+import { MobileNav } from '@/components/MobileNav';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 export const metadata: Metadata = {
@@ -26,7 +27,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           <div className="flex min-h-screen">
             <Sidebar />
-            <main className="min-w-0 flex-1">{children}</main>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <MobileNav />
+              <main className="min-w-0 flex-1">{children}</main>
+            </div>
           </div>
         </ThemeProvider>
       </body>

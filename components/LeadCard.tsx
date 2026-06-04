@@ -66,7 +66,7 @@ export function LeadCard({
         onClick={onClick}
         onKeyDown={handleCardKey}
         className={cn(
-          'group relative flex w-full cursor-pointer flex-col gap-3 rounded-lg border bg-surface p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          'group relative flex w-full cursor-pointer flex-col gap-3 rounded-lg border bg-surface p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:p-5',
           selected
             ? 'border-accent shadow-[0_0_0_3px_hsl(var(--accent)/0.12)]'
             : 'border-border hover:border-foreground/30'

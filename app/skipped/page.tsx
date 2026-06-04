@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Archive, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { PageContainer } from '@/components/PageContainer';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Lead } from '@/lib/types';
 
@@ -42,7 +43,7 @@ export default function SkippedPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[960px] px-10 py-8">
+    <PageContainer width="sm">
       <PageHeader
         title="Skipped"
         subtitle="Every lead the AI extraction flagged with a skip_reason, kept for reference."
@@ -64,7 +65,7 @@ export default function SkippedPage() {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-12 animate-pulse border-b border-border bg-surface last:border-b-0"
+              className="h-12 animate-pulse border-b border-border bg-surface last:border-b-0 sm:h-12"
             />
           ))}
         </div>
@@ -77,51 +78,79 @@ export default function SkippedPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full table-fixed text-[13px]">
-            <colgroup>
-              <col className="w-[35%]" />
-              <col className="w-[40%]" />
-              <col className="w-[25%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-border bg-surface-2">
-                <th className="px-5 py-2.5 text-left font-num text-2xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Name
-                </th>
-                <th className="px-5 py-2.5 text-left font-num text-2xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Skip Reason
-                </th>
-                <th className="px-5 py-2.5 text-left font-num text-2xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Date Added
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead, i) => (
-                <tr
-                  key={lead.id}
-                  className={`border-b border-border last:border-b-0 ${
-                    i % 2 === 0 ? 'bg-surface' : 'bg-surface-2/50'
-                  }`}
-                >
-                  <td className="px-5 py-3 text-foreground">
-                    {lead.business_name || lead.name}
-                    {lead.business_name && (
-                      <div className="text-[12px] text-muted-foreground">{lead.name}</div>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    {lead.skip_reason || '—'}
-                  </td>
-                  <td className="px-5 py-3 font-num text-muted-foreground">
-                    {formatDate(lead.created_at)}
-                  </td>
+        <>
+          {/* Mobile: card list */}
+          <ul className="space-y-2 sm:hidden">
+            {leads.map((lead) => (
+              <li
+                key={lead.id}
+                className="rounded-lg border border-border bg-surface px-4 py-3"
+              >
+                <div className="text-[14px] font-semibold tracking-tight text-foreground">
+                  {lead.business_name || lead.name}
+                </div>
+                {lead.business_name && (
+                  <div className="mt-0.5 text-[12px] text-muted-foreground">
+                    {lead.name}
+                  </div>
+                )}
+                <div className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                  {lead.skip_reason || '—'}
+                </div>
+                <div className="mt-2 font-num text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                  {formatDate(lead.created_at)}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop: table */}
+          <div className="hidden overflow-hidden rounded-lg border border-border sm:block">
+            <table className="w-full table-fixed text-[13px]">
+              <colgroup>
+                <col className="w-[35%]" />
+                <col className="w-[40%]" />
+                <col className="w-[25%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-border bg-surface-2">
+                  <th className="px-5 py-2.5 text-left font-num text-2xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Name
+                  </th>
+                  <th className="px-5 py-2.5 text-left font-num text-2xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Skip Reason
+                  </th>
+                  <th className="px-5 py-2.5 text-left font-num text-2xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Date Added
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {leads.map((lead, i) => (
+                  <tr
+                    key={lead.id}
+                    className={`border-b border-border last:border-b-0 ${
+                      i % 2 === 0 ? 'bg-surface' : 'bg-surface-2/50'
+                    }`}
+                  >
+                    <td className="px-5 py-3 text-foreground">
+                      {lead.business_name || lead.name}
+                      {lead.business_name && (
+                        <div className="text-[12px] text-muted-foreground">{lead.name}</div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {lead.skip_reason || '—'}
+                    </td>
+                    <td className="px-5 py-3 font-num text-muted-foreground">
+                      {formatDate(lead.created_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <ConfirmDialog
@@ -142,6 +171,6 @@ export default function SkippedPage() {
         busy={deleting}
         onConfirm={handleClearAll}
       />
-    </div>
+    </PageContainer>
   );
 }

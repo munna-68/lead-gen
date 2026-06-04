@@ -17,7 +17,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between',
+        'mb-6 flex flex-col gap-4 sm:mb-8 md:flex-row md:items-end md:justify-between',
         className
       )}
     >
@@ -27,11 +27,11 @@ export function PageHeader({
             {eyebrow}
           </div>
         )}
-        <h1 className="mt-1.5 text-[28px] font-semibold leading-tight tracking-tight text-foreground">
+        <h1 className="mt-1.5 text-[24px] font-semibold leading-tight tracking-tight text-foreground sm:text-[28px]">
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-muted-foreground">
+          <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-muted-foreground sm:text-[14px]">
             {subtitle}
           </p>
         )}

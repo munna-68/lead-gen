@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, Check } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { PageContainer } from '@/components/PageContainer';
 import { Textarea } from '@/components/ui/Textarea';
 import type { ImportResult } from '@/lib/types';
 
@@ -105,7 +106,7 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1000px] px-10 py-8">
+    <PageContainer width="md">
       <PageHeader
         title="Import Leads"
         subtitle="Paste the JSON array from Claude or ChatGPT below."
@@ -215,6 +216,6 @@ export default function ImportPage() {
           </Link>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

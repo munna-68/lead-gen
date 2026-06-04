@@ -6,6 +6,7 @@ import { Plus, Inbox } from 'lucide-react';
 import type { Lead, LeadQuality, LeadStatus, StatsResponse } from '@/lib/types';
 import type { HasWebsiteFilter } from '@/lib/db';
 import { PageHeader } from '@/components/PageHeader';
+import { PageContainer } from '@/components/PageContainer';
 import { StatsRow } from '@/components/StatsRow';
 import { Filters } from '@/components/Filters';
 import { LeadCard } from '@/components/LeadCard';
@@ -88,7 +89,7 @@ export default function PipelinePage() {
   const hasFilters = Boolean(search || status || quality || niche || sourceGroup || hasWebsite);
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-10 py-8">
+    <PageContainer width="lg">
       <PageHeader
         title="Pipeline"
         subtitle="Your active Facebook outreach. Filter, click into a lead, and track every message in the sequence."
@@ -167,6 +168,6 @@ export default function PipelinePage() {
         onUpdate={handleUpdate}
         onDelete={handleDelete}
       />
-    </div>
+    </PageContainer>
   );
 }
