@@ -34,7 +34,7 @@ For skipped posts, return:
 
 Return one flat JSON array containing both leads and skipped entries. Do not wrap it in markdown. Do not add any text before or after the array.`;
 
-const STEPS: { text: string; emphasis?: string }[] = [
+const STEPS: { text: string; emphasis?: string; tail?: string }[] = [
   { text: 'Click "Copy Prompt" above' },
   { text: 'Open Claude at ', emphasis: 'claude.ai', tail: ' or ChatGPT' },
   { text: 'Start a new conversation and paste the prompt as your first message' },
