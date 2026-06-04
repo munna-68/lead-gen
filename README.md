@@ -1,0 +1,196 @@
+# LeadFlow
+
+A personal CRM dashboard for managing Facebook cold outreach leads for a web design business. Paste the JSON output from your AI extraction step, ingest it, and run a three-message DM sequence without dropping anyone.
+
+![LeadFlow](https://img.shields.io/badge/Next.js-14-black) ![Postgres](https://img.shields.io/badge/Vercel_Postgres-✓-orange) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-blue)
+
+## Stack
+
+- **Framework:** Next.js 14 (App Router) + React 18
+- **Database:** Vercel Postgres (`@vercel/postgres`)
+- **Styling:** Tailwind CSS
+- **Motion:** Framer Motion
+- **Language:** TypeScript
+
+## Features
+
+- **Pipeline dashboard** — filterable grid of leads with stats row, search, and faceted filters
+- **Lead detail panel** — slide-in side panel with the message 1 hook (click-to-copy), six-step message tracker, status dropdown, auto-saving notes, and editable website field
+- **Bulk import** — paste the JSON array from your AI step, validate it, then import. Skipped rows are still stored (with `skip_reason`) so you have a full audit trail. Duplicates (matched by `name` + `source_group`) are silently ignored.
+- **Skipped archive** — every lead the AI flagged with a `skip_reason` lands here for reference
+
+## Project structure
+
+```
+.
+├── app/
+│   ├── layout.tsx              root layout, fonts, sidebar
+│   ├── page.tsx                dashboard / pipeline
+│   ├── import/page.tsx         JSON import
+│   ├── skipped/page.tsx        skipped leads archive
+│   ├── globals.css             global styles + grain overlay
+│   └── api/
+│       ├── leads/route.ts              GET (with filters)
+│       ├── leads/[id]/route.ts         GET, PATCH
+│       ├── leads/import/route.ts       POST (bulk)
+│       ├── leads/skipped/route.ts      GET
+│       └── stats/route.ts              GET (dashboard counts)
+├── components/                 shared UI (badges, panels, filters, etc.)
+├── lib/                        types, db helpers
+├── scripts/
+│   └── setup-db.ts             one-shot migration
+└── tailwind.config.ts          design system
+```
+
+## Local setup
+
+1. **Clone the repo**
+
+   ```bash
+   git clone <your-repo-url> leadflow
+   cd leadflow
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Create a Vercel Postgres database**
+
+   - Open the [Vercel dashboard](https://vercel.com/dashboard)
+   - Go to **Storage → Create Database → Postgres**
+   - Copy the `POSTGRES_URL` connection string
+
+4. **Add env variables**
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Paste the `POSTGRES_URL` into `.env.local`.
+
+5. **Run the migration**
+
+   ```bash
+   npm run db:setup
+   ```
+
+   This creates the `leads` table and indexes.
+
+6. **Start the dev server**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000).
+
+## Deployment to Vercel
+
+1. Push the repo to GitHub and import it into Vercel
+2. In the Vercel project, go to **Settings → Environment Variables**
+3. Add `POSTGRES_URL` with the same value from your Vercel Postgres database
+4. Deploy
+
+The build will run automatically. If this is the first deploy, run `npm run db:setup` locally once (or via `vercel env pull` + `npx tsx scripts/setup-db.ts`) to create the table.
+
+## API reference
+
+### `POST /api/leads/import`
+
+Bulk-insert leads from a JSON array.
+
+Body — either a raw array, or `{ leads: [...] }`:
+
+```json
+{
+  "leads": [
+    {
+      "name": "Maya Patel",
+      "business_name": "Bloom & Vine",
+      "niche": "florist",
+      "location": "Austin, TX",
+      "facebook_url": "https://facebook.com/bloomandvine",
+      "website": "https://bloomandvine.com",
+      "has_website": true,
+      "post_context": "Posted about a Squarespace redesign struggle.",
+      "message_1_hook": "Saw your post...",
+      "lead_quality": "warm",
+      "source_group": "Austin Small Biz Owners",
+      "skip_reason": null
+    }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "inserted": 12,
+  "skipped": 3,
+  "duplicates": 1,
+  "errors": []
+}
+```
+
+### `GET /api/leads`
+
+Query params (all optional): `status`, `niche`, `lead_quality`, `source_group`, `search`. Skipped leads are excluded.
+
+### `PATCH /api/leads/[id]`
+
+Body: any subset of mutable fields. Returns the updated row.
+
+### `GET /api/leads/skipped`
+
+Returns all leads with a non-null `skip_reason`.
+
+### `GET /api/stats`
+
+```json
+{
+  "total": 42,
+  "warm": 17,
+  "contacted": 8,
+  "replied": 3,
+  "pitched": 2,
+  "closed": 1
+}
+```
+
+## Schema
+
+| Column           | Type                              | Default |
+| ---------------- | --------------------------------- | ------- |
+| `id`             | `uuid` PK                         | `gen_random_uuid()` |
+| `name`           | `text` not null                   | — |
+| `business_name`  | `text`                            | null |
+| `niche`          | `text`                            | — |
+| `location`       | `text`                            | — |
+| `facebook_url`   | `text`                            | null |
+| `website`        | `text`                            | null |
+| `has_website`    | `boolean`                         | null |
+| `post_context`   | `text`                            | — |
+| `message_1_hook` | `text`                            | — |
+| `lead_quality`   | `text` (`warm` / `cold`)          | `cold` |
+| `source_group`   | `text`                            | — |
+| `skip_reason`    | `text`                            | null |
+| `status`         | `text` (see below)                | `new` |
+| `msg1_sent`      | `boolean`                         | false |
+| `msg1_seen`      | `boolean`                         | false |
+| `msg1_replied`   | `boolean`                         | false |
+| `msg2_sent`      | `boolean`                         | false |
+| `msg2_replied`   | `boolean`                         | false |
+| `msg3_sent`      | `boolean`                         | false |
+| `notes`          | `text`                            | null |
+| `created_at`     | `timestamp`                       | `now()` |
+| `updated_at`     | `timestamp`                       | `now()` |
+
+**Statuses:** `new`, `contacted`, `engaged`, `pitched`, `no_response`, `closed`, `dead`.
+
+## License
+
+MIT
