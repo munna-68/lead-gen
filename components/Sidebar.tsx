@@ -6,8 +6,9 @@ import { clsx } from 'clsx';
 
 const NAV = [
   { href: '/', label: 'Pipeline', code: '01' },
-  { href: '/import', label: 'Import', code: '02' },
-  { href: '/skipped', label: 'Skipped', code: '03' },
+  { href: '/prompt', label: 'Prompt', code: '02' },
+  { href: '/import', label: 'Import', code: '03' },
+  { href: '/skipped', label: 'Skipped', code: '04' },
 ];
 
 export function Sidebar() {

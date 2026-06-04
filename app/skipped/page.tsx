@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import type { Lead } from '@/lib/types';
 import { QualityBadge } from '@/components/QualityBadge';
 import { EmptyState } from '@/components/EmptyState';

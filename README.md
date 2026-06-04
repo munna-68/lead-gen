@@ -2,15 +2,20 @@
 
 A personal CRM dashboard for managing Facebook cold outreach leads for a web design business. Paste the JSON output from your AI extraction step, ingest it, and run a three-message DM sequence without dropping anyone.
 
-![LeadFlow](https://img.shields.io/badge/Next.js-14-black) ![Postgres](https://img.shields.io/badge/Vercel_Postgres-✓-orange) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-blue)
+![Next.js](https://img.shields.io/badge/Next.js-15-black) ![React](https://img.shields.io/badge/React-19-blue) ![Postgres](https://img.shields.io/badge/Vercel_Postgres-✓-orange) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-blue)
 
 ## Stack
 
-- **Framework:** Next.js 14 (App Router) + React 18
+- **Framework:** Next.js 15 (App Router) + React 19
 - **Database:** Vercel Postgres (`@vercel/postgres`)
 - **Styling:** Tailwind CSS
-- **Motion:** Framer Motion
+- **Motion:** [`motion`](https://motion.dev) (the modern, actively-maintained successor to `framer-motion`)
+- **Validation:** [Zod](https://zod.dev) for runtime input validation on all API routes
 - **Language:** TypeScript
+
+> **Why these versions?** As of May 2026, Next.js <15.5.18 has 13 unpatched CVEs (middleware/auth bypass, XSS, SSRF, cache poisoning, DoS). The 14.x line will not receive backports. `next@^15.5.18` ships with all current security fixes.
+>
+> `framer-motion` is in maintenance mode; the same library is now published as `motion` and is imported from `motion/react` for the React API.
 
 ## Features
 
@@ -26,6 +31,7 @@ A personal CRM dashboard for managing Facebook cold outreach leads for a web des
 ├── app/
 │   ├── layout.tsx              root layout, fonts, sidebar
 │   ├── page.tsx                dashboard / pipeline
+│   ├── prompt/page.tsx         extraction prompt + workflow
 │   ├── import/page.tsx         JSON import
 │   ├── skipped/page.tsx        skipped leads archive
 │   ├── globals.css             global styles + grain overlay
@@ -86,6 +92,23 @@ A personal CRM dashboard for managing Facebook cold outreach leads for a web des
    ```
 
    Open [http://localhost:3000](http://localhost:3000).
+
+7. **Audit dependencies (optional, recommended before deploying)**
+
+   ```bash
+   npm run audit
+   ```
+
+   The `.npmrc` is set to `audit-level=moderate` so installs fail on any
+   known moderate-or-higher vulnerability. The audit script ignores
+   dev-only packages.
+
+## Security model
+
+- All API inputs are validated with **Zod** at the boundary — invalid payloads return `400` with a structured error, never reaching the database.
+- The import endpoint enforces an **8 MB body cap** and a **5,000-lead-per-request** limit.
+- The PATCH endpoint validates the UUID format of the `id` path param before hitting the database.
+- API responses carry `Cache-Control: no-store` and standard security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`) via `next.config.js`. The `X-Powered-By` header is disabled.
 
 ## Deployment to Vercel
 

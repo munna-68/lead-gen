@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
 import type { Lead, LeadStatus } from '@/lib/types';
 import { StatusBadge } from './StatusBadge';
