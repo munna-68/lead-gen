@@ -81,20 +81,24 @@ export async function findExistingLeads(
   if (pairs.length === 0) return new Set();
 
   const sql = client();
-  const values: string[] = [];
-  const conds: string[] = [];
-  for (const p of pairs) {
-    values.push(p.name, p.source_group);
-    const base = values.length - 1;
-    conds.push(`(name = $${base} AND source_group = $${base + 1})`);
-  }
-  const rows = (await sql(
-    `SELECT name, source_group FROM leads WHERE ${conds.join(' OR ')}`,
-    values
-  )) as Array<{ name: string; source_group: string }>;
-
   const out = new Set<string>();
-  for (const r of rows) out.add(`${r.name}::${r.source_group}`);
+  const CHUNK = 100;
+
+  for (let i = 0; i < pairs.length; i += CHUNK) {
+    const slice = pairs.slice(i, i + CHUNK);
+    const values: string[] = [];
+    const conds: string[] = [];
+    for (const p of slice) {
+      values.push(p.name, p.source_group);
+      const base = values.length - 1;
+      conds.push(`(name = $${base} AND source_group = $${base + 1})`);
+    }
+    const rows = (await sql(
+      `SELECT name, source_group FROM leads WHERE ${conds.join(' OR ')}`,
+      values
+    )) as Array<{ name: string; source_group: string }>;
+    for (const r of rows) out.add(`${r.name}::${r.source_group}`);
+  }
   return out;
 }
 
@@ -118,31 +122,38 @@ export async function bulkInsertLeads(leads: InsertableLead[]): Promise<number> 
 
   const sql = client();
   const COLS = 12;
-  const values: (string | number | boolean | null)[] = [];
-  const placeholders: string[] = [];
+  const CHUNK = 50;
 
-  for (let i = 0; i < leads.length; i++) {
-    const l = leads[i];
-    const o = i * COLS;
-    values.push(
-      l.name, l.business_name, l.niche, l.location,
-      l.facebook_url, l.website, l.has_website,
-      l.post_context, l.message_1_hook,
-      l.lead_quality, l.source_group, l.skip_reason
+  let total = 0;
+  for (let start = 0; start < leads.length; start += CHUNK) {
+    const slice = leads.slice(start, start + CHUNK);
+    const values: (string | number | boolean | null)[] = [];
+    const placeholders: string[] = [];
+
+    for (let i = 0; i < slice.length; i++) {
+      const l = slice[i];
+      const o = i * COLS;
+      values.push(
+        l.name, l.business_name, l.niche, l.location,
+        l.facebook_url, l.website, l.has_website,
+        l.post_context, l.message_1_hook,
+        l.lead_quality, l.source_group, l.skip_reason
+      );
+      placeholders.push(
+        `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10}, $${o + 11}, $${o + 12})`
+      );
+    }
+
+    await sql(
+      `INSERT INTO leads (
+         name, business_name, niche, location, facebook_url, website, has_website,
+         post_context, message_1_hook, lead_quality, source_group, skip_reason
+       ) VALUES ${placeholders.join(', ')}`,
+      values
     );
-    placeholders.push(
-      `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10}, $${o + 11}, $${o + 12})`
-    );
+    total += slice.length;
   }
-
-  await sql(
-    `INSERT INTO leads (
-       name, business_name, niche, location, facebook_url, website, has_website,
-       post_context, message_1_hook, lead_quality, source_group, skip_reason
-     ) VALUES ${placeholders.join(', ')}`,
-    values
-  );
-  return leads.length;
+  return total;
 }
 
 export async function updateLead(

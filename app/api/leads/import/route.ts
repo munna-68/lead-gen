@@ -109,6 +109,20 @@ function normalizeSkipped(l: z.infer<typeof SkippedLeadInput>) {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error('[import] unhandled:', err);
+    return NextResponse.json(
+      { error: `Server error: ${message}`, stack: stack?.split('\n').slice(0, 3).join(' | ') },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePost(req: NextRequest) {
   const contentLength = Number(req.headers.get('content-length') || '0');
   if (contentLength > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
@@ -163,7 +177,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Single DB round trip to find which of the qualifying leads already exist.
-  const existing = await findExistingLeads(toCheckInDb);
+  let existing: Set<string>;
+  try {
+    existing = await findExistingLeads(toCheckInDb);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown DB error';
+    console.error('[import] findExistingLeads failed:', err);
+    return NextResponse.json(
+      { error: `Duplicate check failed: ${message}` },
+      { status: 500 }
+    );
+  }
 
   const finalToInsert: InsertableLead[] = [];
   let dbDupes = 0;
@@ -182,9 +206,18 @@ export async function POST(req: NextRequest) {
   result.duplicates += dbDupes;
 
   if (finalToInsert.length > 0) {
-    const nonSkipped = finalToInsert.filter((l) => !l.skip_reason);
-    await bulkInsertLeads(finalToInsert);
-    result.inserted = nonSkipped.length;
+    try {
+      const nonSkipped = finalToInsert.filter((l) => !l.skip_reason);
+      await bulkInsertLeads(finalToInsert);
+      result.inserted = nonSkipped.length;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown DB error';
+      console.error('[import] bulkInsertLeads failed:', err);
+      return NextResponse.json(
+        { error: `Insert failed: ${message}` },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json(result);
