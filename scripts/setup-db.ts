@@ -9,6 +9,8 @@ const STATEMENTS = [
     niche TEXT NOT NULL DEFAULT '',
     location TEXT NOT NULL DEFAULT '',
     facebook_url TEXT,
+    facebook_page_url TEXT,
+    post_url TEXT,
     website TEXT,
     has_website BOOLEAN,
     post_context TEXT NOT NULL DEFAULT '',
@@ -27,6 +29,8 @@ const STATEMENTS = [
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE leads ADD COLUMN IF NOT EXISTS facebook_page_url TEXT`,
+  `ALTER TABLE leads ADD COLUMN IF NOT EXISTS post_url TEXT`,
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_skip_reason ON leads(skip_reason)`,
   `CREATE INDEX IF NOT EXISTS idx_leads_name_source ON leads(name, source_group)`,

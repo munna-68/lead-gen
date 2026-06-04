@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Facebook } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
 import { QualityBadge } from '@/components/QualityBadge';
@@ -114,6 +114,15 @@ export function LeadCard({
           {lead.location && (
             <span className="inline-flex items-center rounded-sm bg-surface-2 px-1.5 py-0.5 font-num text-[11px] font-medium leading-none text-foreground/80">
               {lead.location}
+            </span>
+          )}
+          {lead.facebook_page_url && (
+            <span
+              title="Has a Facebook page"
+              className="inline-flex items-center gap-1 rounded-sm bg-accent/10 px-1.5 py-0.5 text-[11px] font-medium leading-none text-accent ring-1 ring-inset ring-accent/20"
+            >
+              <Facebook className="h-3 w-3" aria-hidden />
+              Page
             </span>
           )}
         </div>

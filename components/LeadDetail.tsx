@@ -12,6 +12,7 @@ import {
   Sparkles,
   ListChecks,
   Trash2,
+  Link2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Lead, LeadStatus } from '@/lib/types';
@@ -165,6 +166,7 @@ export function LeadDetail({
 }) {
   const [website, setWebsite] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
+  const [facebookPageUrl, setFacebookPageUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -173,6 +175,7 @@ export function LeadDetail({
     if (!lead) return;
     setWebsite(lead.website || '');
     setFacebookUrl(lead.facebook_url || '');
+    setFacebookPageUrl(lead.facebook_page_url || '');
     setNotes(lead.notes || '');
     setConfirmDeleteOpen(false);
   }, [lead?.id]);
@@ -216,6 +219,11 @@ export function LeadDetail({
   const saveFacebook = async (val: string) => {
     if (val === (lead.facebook_url || '')) return;
     await onUpdate(lead.id, { facebook_url: val.trim() || null });
+  };
+
+  const saveFacebookPage = async (val: string) => {
+    if (val === (lead.facebook_page_url || '')) return;
+    await onUpdate(lead.id, { facebook_page_url: val.trim() || null });
   };
 
   const saveWebsite = async (val: string) => {
@@ -331,6 +339,44 @@ export function LeadDetail({
                   )}
                 </div>
               </div>
+
+              <div>
+                <Label className="mb-1.5 block">Facebook page</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={facebookPageUrl}
+                    onChange={(e) => setFacebookPageUrl(e.target.value)}
+                    onBlur={(e) => saveFacebookPage(e.target.value)}
+                    placeholder="https://facebook.com/..."
+                    className="flex-1"
+                  />
+                  {lead.facebook_page_url && (
+                    <a
+                      href={lead.facebook_page_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-accent px-3 font-num text-2xs uppercase tracking-[0.08em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      Open <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {lead.post_url && (
+                <div>
+                  <Label className="mb-1.5 block">Original post</Label>
+                  <a
+                    href={lead.post_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent/5 px-3 text-[13px] font-medium text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    View Post <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
 
               <div>
                 <Label className="mb-1.5 block">Has website</Label>

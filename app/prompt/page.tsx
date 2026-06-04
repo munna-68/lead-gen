@@ -5,39 +5,36 @@ import Link from 'next/link';
 import { Check, Copy, ArrowRight } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 
-const EXTRACTION_PROMPT = `You are a lead extraction assistant for a web design business. When I paste raw Facebook group post content, extract qualifying leads and return a JSON array only. No explanation, no commentary, just the JSON.
-A qualifying lead is a small business owner or independent service provider who could benefit from a website. Include: contractors, tradespeople, cleaners, painters, flooring installers, tile workers, pet services, photographers, food businesses, boutiques, event services, consultants with a real practice, lawyers, insurance agents, real estate agents, and similar.
-Skip: job seekers, people looking to hire, people asking for recommendations, event promoters with no business, motivational posts, travel agents, generic commenters with no business context.
-For each qualifying lead return:
-{
-name: person name as shown,
-business_name: business name if different from person name else null,
-niche: 1-3 words e.g. Tile Installer / Painting Contractor / Pet Boarding,
-location: city and state if mentioned else infer from group name,
-facebook_url: profile or page URL if visible in the text else null,
-website: website URL if mentioned in post else null,
-post_context: 1-2 sentences — what did they post and what does their business do,
-message_1_hook: short casual DM opener referencing something specific from their post, no pitch, under 3 sentences,
-has_website: null,
-lead_quality: warm if they described services in detail or have an active page, cold if minimal info,
-source_group: exact name of the Facebook group
-}
-For skipped entries return:
-{
-name: their name,
-skip_reason: one short reason
-}
-Return one flat JSON array with both leads and skipped entries mixed. No markdown. No text before or after the array.`;
+const EXTRACTION_PROMPT = `You are a lead extraction assistant. I will give you the raw HTML of a saved Facebook group page. Extract every post and return a JSON array of leads.
+
+For each role="article" element, extract one lead object with these exact keys:
+author_name, facebook_profile_url, facebook_page_url, post_url, business_name, niche, location, post_context, message_1_hook, has_website, website, lead_quality, source_group, skip_reason
+
+Rules:
+- facebook_profile_url: first <a> href matching /groups/{id}/user/{id}/, strip tracking params
+- facebook_page_url: <a> href matching facebook.com/{slug}/posts/ where slug is not groups/permalink/photo/video. Use just https://facebook.com/{slug}. For permalink.php links extract the id param.
+- post_url: <a> href containing /groups/{slug}/posts/, strip tracking params
+- post_context: longest text in <span dir="auto"> or <div dir="auto"> blocks, strip "… See more"
+- location: text of <a> linking to a Facebook place page (pattern: [City-Name-digits]), or infer from post
+- niche: 2-4 word phrase inferred from post content
+- lead_quality: "warm" for local business posts, "cold" for off-topic/spam/international
+- has_website: always "unknown"
+- website: always null
+- message_1_hook: 1-2 sentence casual DM opener referencing their post, no pitch, no mention of websites
+- skip_reason: brief reason if not a real lead, otherwise null
+
+Return ONLY a raw JSON array. No explanation, no markdown, no backticks. Start with [ and end with ].
+
+Paste HTML below this line:`;
 
 const STEPS = [
-  { num: '01', text: 'Copy the prompt below.' },
-  { num: '02', text: 'Open Claude (claude.ai) or ChatGPT in a fresh conversation.' },
-  { num: '03', text: 'Paste the prompt as message #1.' },
-  { num: '04', text: 'Open a Facebook business group and copy a chunk of post text.' },
-  { num: '05', text: 'Paste the Facebook text as message #2.' },
-  { num: '06', text: 'Copy the JSON array the AI returns.' },
-  { num: '07', text: 'Go to the Import page and paste it.' },
-  { num: '08', text: 'Click Import. Your leads appear in the pipeline automatically.' },
+  { num: '01', text: 'Open Facebook group in Chrome' },
+  { num: '02', text: 'Scroll down to load posts you want to capture' },
+  { num: '03', text: 'Click the SingleFile extension icon (install from Chrome Web Store if needed)' },
+  { num: '04', text: 'Open the downloaded .html file, press Ctrl+A, Ctrl+C' },
+  { num: '05', text: 'Open Claude or ChatGPT, paste this prompt, then paste the HTML below it' },
+  { num: '06', text: 'Copy the JSON response' },
+  { num: '07', text: 'Go to the Import page and paste the JSON' },
 ];
 
 export default function PromptPage() {
@@ -65,7 +62,7 @@ export default function PromptPage() {
     <div className="mx-auto w-full max-w-[960px] px-10 py-8">
       <PageHeader
         title="Extraction Prompt"
-        subtitle="Copy this prompt, go to Claude or ChatGPT, paste it followed by raw Facebook group text. Paste the resulting JSON into the Import page."
+        subtitle="Save a Facebook group page with SingleFile, then paste the prompt + raw HTML into Claude or ChatGPT. Copy the resulting JSON into the Import page."
       />
 
       <div className="mb-3 flex items-center gap-2 font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">

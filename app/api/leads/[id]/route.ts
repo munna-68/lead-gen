@@ -10,6 +10,8 @@ const PATCHABLE = z
     niche: z.string().max(120).optional(),
     location: z.string().max(160).optional(),
     facebook_url: z.string().url().max(500).nullable().optional(),
+    facebook_page_url: z.string().url().max(500).nullable().optional(),
+    post_url: z.string().url().max(500).nullable().optional(),
     website: z.string().url().max(500).nullable().optional(),
     has_website: z.boolean().nullable().optional(),
     post_context: z.string().max(2000).optional(),

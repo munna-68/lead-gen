@@ -9,21 +9,23 @@ import type { ImportResult } from '@/lib/types';
 
 const SAMPLE = `[
   {
-    "name": "Maya Patel",
+    "author_name": "Maya Patel",
+    "facebook_profile_url": "https://facebook.com/maya.patel",
+    "facebook_page_url": "https://facebook.com/bloomandvine",
+    "post_url": "https://facebook.com/groups/austinsmallbiz/posts/1234567890/",
     "business_name": "Bloom & Vine",
     "niche": "florist",
     "location": "Austin, TX",
-    "facebook_url": "https://facebook.com/bloomandvine",
-    "website": "https://bloomandvine.com",
-    "has_website": true,
     "post_context": "Owner posted about a website redesign struggle; their current site is on Squarespace and they hate it.",
     "message_1_hook": "Saw your post about the Squarespace headaches — I redesign florist sites that actually convert wedding inquiries. Worth a quick look?",
+    "has_website": "unknown",
+    "website": null,
     "lead_quality": "warm",
     "source_group": "Austin Small Biz Owners",
     "skip_reason": null
   },
   {
-    "name": "Tariq Holmes",
+    "author_name": "Tariq Holmes",
     "skip_reason": "no post context"
   }
 ]`;
@@ -151,7 +153,7 @@ export default function ImportPage() {
             setError(null);
             setResult(null);
           }}
-          placeholder='[{"name": "...", "niche": "...", ...}]'
+          placeholder='[{"author_name": "...", "post_context": "...", "facebook_profile_url": "...", ...}]'
           spellCheck={false}
           className="min-h-[320px] resize-y rounded-none border-0 bg-surface-2 font-num text-[13px] leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
         />

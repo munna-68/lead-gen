@@ -16,6 +16,8 @@ export interface Lead {
   niche: string;
   location: string;
   facebook_url: string | null;
+  facebook_page_url: string | null;
+  post_url: string | null;
   website: string | null;
   has_website: boolean | null;
   post_context: string;

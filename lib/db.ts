@@ -24,6 +24,8 @@ export async function ensureSchema(): Promise<void> {
         niche TEXT NOT NULL DEFAULT '',
         location TEXT NOT NULL DEFAULT '',
         facebook_url TEXT,
+        facebook_page_url TEXT,
+        post_url TEXT,
         website TEXT,
         has_website BOOLEAN,
         post_context TEXT NOT NULL DEFAULT '',
@@ -44,6 +46,8 @@ export async function ensureSchema(): Promise<void> {
       )`,
       []
     );
+    await sql(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS facebook_page_url TEXT`, []);
+    await sql(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS post_url TEXT`, []);
     await sql(`CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`, []);
     await sql(`CREATE INDEX IF NOT EXISTS idx_leads_skip_reason ON leads(skip_reason)`, []);
     await sql(
@@ -159,6 +163,8 @@ export interface InsertableLead {
   niche: string;
   location: string;
   facebook_url: string | null;
+  facebook_page_url: string | null;
+  post_url: string | null;
   website: string | null;
   has_website: boolean | null;
   post_context: string;
@@ -172,7 +178,7 @@ export async function bulkInsertLeads(leads: InsertableLead[]): Promise<number> 
   if (leads.length === 0) return 0;
 
   const sql = client();
-  const COLS = 12;
+  const COLS = 14;
   const CHUNK = 50;
 
   let total = 0;
@@ -186,19 +192,20 @@ export async function bulkInsertLeads(leads: InsertableLead[]): Promise<number> 
       const o = i * COLS;
       values.push(
         l.name, l.business_name, l.niche, l.location,
-        l.facebook_url, l.website, l.has_website,
+        l.facebook_url, l.facebook_page_url, l.post_url,
+        l.website, l.has_website,
         l.post_context, l.message_1_hook,
         l.lead_quality, l.source_group, l.skip_reason
       );
       placeholders.push(
-        `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10}, $${o + 11}, $${o + 12})`
+        `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10}, $${o + 11}, $${o + 12}, $${o + 13}, $${o + 14})`
       );
     }
 
     await sql(
       `INSERT INTO leads (
-         name, business_name, niche, location, facebook_url, website, has_website,
-         post_context, message_1_hook, lead_quality, source_group, skip_reason
+         name, business_name, niche, location, facebook_url, facebook_page_url, post_url,
+         website, has_website, post_context, message_1_hook, lead_quality, source_group, skip_reason
        ) VALUES ${placeholders.join(', ')}`,
       values
     );
