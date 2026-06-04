@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { bulkInsertLeads, findDuplicate } from '@/lib/db';
+import { bulkInsertLeads, findExistingLeads, InsertableLead } from '@/lib/db';
 import type { ImportResult, LeadQuality } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -137,8 +137,9 @@ export async function POST(req: NextRequest) {
     errors: [],
   };
 
-  const toInsert: ReturnType<typeof normalizeFull | typeof normalizeSkipped>[] = [];
+  const toInsert: InsertableLead[] = [];
   const seenInBatch = new Set<string>();
+  const toCheckInDb: Array<{ name: string; source_group: string }> = [];
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -157,20 +158,32 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // source_group is required for qualifying leads (enforced by FullLeadInput).
-    // Skipped entries skip the duplicate check because they have no source_group.
-    const isDup = await findDuplicate(lead.name, lead.source_group);
-    if (isDup) {
-      result.duplicates++;
-      continue;
-    }
-
+    toCheckInDb.push({ name: lead.name, source_group: lead.source_group });
     toInsert.push(lead);
   }
 
-  if (toInsert.length > 0) {
-    const nonSkipped = toInsert.filter((l) => !l.skip_reason);
-    await bulkInsertLeads(toInsert);
+  // Single DB round trip to find which of the qualifying leads already exist.
+  const existing = await findExistingLeads(toCheckInDb);
+
+  const finalToInsert: InsertableLead[] = [];
+  let dbDupes = 0;
+  for (const lead of toInsert) {
+    if (lead.skip_reason) {
+      finalToInsert.push(lead);
+      continue;
+    }
+    const key = `${lead.name}::${lead.source_group}`;
+    if (existing.has(key)) {
+      dbDupes++;
+    } else {
+      finalToInsert.push(lead);
+    }
+  }
+  result.duplicates += dbDupes;
+
+  if (finalToInsert.length > 0) {
+    const nonSkipped = finalToInsert.filter((l) => !l.skip_reason);
+    await bulkInsertLeads(finalToInsert);
     result.inserted = nonSkipped.length;
   }
 

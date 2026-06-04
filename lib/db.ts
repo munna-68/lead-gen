@@ -75,56 +75,73 @@ export async function getStats() {
   };
 }
 
-export async function findDuplicate(name: string, source_group: string): Promise<boolean> {
+export async function findExistingLeads(
+  pairs: Array<{ name: string; source_group: string }>
+): Promise<Set<string>> {
+  if (pairs.length === 0) return new Set();
+
   const sql = client();
-  const rows = await sql`
-    SELECT id FROM leads
-    WHERE name = ${name} AND source_group = ${source_group}
-    LIMIT 1
-  `;
-  return rows.length > 0;
+  const values: string[] = [];
+  const conds: string[] = [];
+  for (const p of pairs) {
+    values.push(p.name, p.source_group);
+    const base = values.length - 1;
+    conds.push(`(name = $${base} AND source_group = $${base + 1})`);
+  }
+  const rows = (await sql(
+    `SELECT name, source_group FROM leads WHERE ${conds.join(' OR ')}`,
+    values
+  )) as Array<{ name: string; source_group: string }>;
+
+  const out = new Set<string>();
+  for (const r of rows) out.add(`${r.name}::${r.source_group}`);
+  return out;
 }
 
-export async function bulkInsertLeads(
-  leads: Array<{
-    name: string;
-    business_name: string | null;
-    niche: string;
-    location: string;
-    facebook_url: string | null;
-    website: string | null;
-    has_website: boolean | null;
-    post_context: string;
-    message_1_hook: string;
-    lead_quality: LeadQuality;
-    source_group: string;
-    skip_reason: string | null;
-  }>
-): Promise<number> {
+export interface InsertableLead {
+  name: string;
+  business_name: string | null;
+  niche: string;
+  location: string;
+  facebook_url: string | null;
+  website: string | null;
+  has_website: boolean | null;
+  post_context: string;
+  message_1_hook: string;
+  lead_quality: LeadQuality;
+  source_group: string;
+  skip_reason: string | null;
+}
+
+export async function bulkInsertLeads(leads: InsertableLead[]): Promise<number> {
   if (leads.length === 0) return 0;
 
   const sql = client();
-  for (const lead of leads) {
-    await sql`
-      INSERT INTO leads (
-        name, business_name, niche, location, facebook_url, website, has_website,
-        post_context, message_1_hook, lead_quality, source_group, skip_reason
-      ) VALUES (
-        ${lead.name},
-        ${lead.business_name},
-        ${lead.niche},
-        ${lead.location},
-        ${lead.facebook_url},
-        ${lead.website},
-        ${lead.has_website},
-        ${lead.post_context},
-        ${lead.message_1_hook},
-        ${lead.lead_quality},
-        ${lead.source_group},
-        ${lead.skip_reason}
-      )
-    `;
+  const COLS = 12;
+  const values: (string | number | boolean | null)[] = [];
+  const placeholders: string[] = [];
+
+  for (let i = 0; i < leads.length; i++) {
+    const l = leads[i];
+    const o = i * COLS;
+    values.push(
+      l.name, l.business_name, l.niche, l.location,
+      l.facebook_url, l.website, l.has_website,
+      l.post_context, l.message_1_hook,
+      l.lead_quality, l.source_group, l.skip_reason
+    );
+    placeholders.push(
+      `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10}, $${o + 11}, $${o + 12})`
+    );
   }
+
+  await sql(
+    `INSERT INTO leads (
+       name, business_name, niche, location, facebook_url, website, has_website,
+       post_context, message_1_hook, lead_quality, source_group, skip_reason
+     ) VALUES ${placeholders.join(', ')}`,
+    values
+  );
   return leads.length;
 }
 

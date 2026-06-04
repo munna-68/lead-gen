@@ -81,8 +81,22 @@ export default function ImportPage() {
         body: JSON.stringify({ leads: parsed }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setParseError(data.error || 'Import failed');
+        const text = await res.text();
+        let msg = `HTTP ${res.status}`;
+        try {
+          const data = JSON.parse(text);
+          msg = data.error || msg;
+          if (data.issues) {
+            const flat = data.issues.fieldErrors || {};
+            const first = Object.entries(flat).find(([, v]) =>
+              Array.isArray(v) && v.length > 0
+            );
+            if (first) msg += ` — ${first[0]}: ${(first[1] as string[])[0]}`;
+          }
+        } catch {
+          msg = text ? `HTTP ${res.status} — ${text.slice(0, 120)}` : `HTTP ${res.status}`;
+        }
+        setParseError(msg);
         return;
       }
       const data: ImportResult = await res.json();
