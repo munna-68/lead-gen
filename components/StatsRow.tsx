@@ -8,7 +8,7 @@ const TILES: Array<{
   accent?: boolean;
 }> = [
   { key: 'total', label: 'Total Leads', accent: true },
-  { key: 'warm', label: 'Warm' },
+  { key: 'warm', label: 'Prime Target' },
   { key: 'contacted', label: 'Contacted' },
   { key: 'replied', label: 'Replied' },
   { key: 'pitched', label: 'Pitched' },

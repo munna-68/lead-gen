@@ -60,18 +60,21 @@ export async function getLeadById(id: string): Promise<Lead | null> {
   return (rows[0] as Lead) || null;
 }
 
+export type HasWebsiteFilter = 'yes' | 'no' | 'unknown';
+
 export async function getLeadsSafe(filters?: {
   status?: LeadStatus;
   niche?: string;
   lead_quality?: LeadQuality;
   source_group?: string;
   search?: string;
+  has_website?: HasWebsiteFilter;
 }): Promise<Lead[]> {
   const sql = client();
   const where: string[] = ['skip_reason IS NULL'];
-  const args: (string | number)[] = [];
+  const args: (string | number | boolean | null)[] = [];
 
-  function add(clause: string, value: string | number) {
+  function add(clause: string, value: string | number | boolean | null) {
     args.push(value);
     where.push(clause.replace('?', `$${args.length}`));
   }
@@ -80,6 +83,9 @@ export async function getLeadsSafe(filters?: {
   if (filters?.niche) add('niche = ?', filters.niche);
   if (filters?.lead_quality) add('lead_quality = ?', filters.lead_quality);
   if (filters?.source_group) add('source_group = ?', filters.source_group);
+  if (filters?.has_website === 'yes') add('has_website = ?', true);
+  if (filters?.has_website === 'no') add('has_website = ?', false);
+  if (filters?.has_website === 'unknown') add('has_website IS ?', null);
   if (filters?.search) {
     args.push(`%${filters.search}%`);
     const idx = args.length;

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Inbox } from 'lucide-react';
 import type { Lead, LeadQuality, LeadStatus, StatsResponse } from '@/lib/types';
+import type { HasWebsiteFilter } from '@/lib/db';
 import { PageHeader } from '@/components/PageHeader';
 import { StatsRow } from '@/components/StatsRow';
 import { Filters } from '@/components/Filters';
@@ -24,6 +25,7 @@ export default function PipelinePage() {
   const [quality, setQuality] = useState<LeadQuality | ''>('');
   const [niche, setNiche] = useState('');
   const [sourceGroup, setSourceGroup] = useState('');
+  const [hasWebsite, setHasWebsite] = useState<HasWebsiteFilter | ''>('');
 
   const fetchLeads = useCallback(async () => {
     const params = new URLSearchParams();
@@ -32,13 +34,14 @@ export default function PipelinePage() {
     if (quality) params.set('lead_quality', quality);
     if (niche) params.set('niche', niche);
     if (sourceGroup) params.set('source_group', sourceGroup);
+    if (hasWebsite) params.set('has_website', hasWebsite);
 
     const res = await fetch(`/api/leads?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
       setLeads(data.leads);
     }
-  }, [search, status, quality, niche, sourceGroup]);
+  }, [search, status, quality, niche, sourceGroup, hasWebsite]);
 
   const fetchStats = useCallback(async () => {
     const res = await fetch('/api/stats');
@@ -73,7 +76,7 @@ export default function PipelinePage() {
   };
 
   const selected = selectedId ? leads.find((l) => l.id === selectedId) || null : null;
-  const hasFilters = Boolean(search || status || quality || niche || sourceGroup);
+  const hasFilters = Boolean(search || status || quality || niche || sourceGroup || hasWebsite);
 
   return (
     <div className="mx-auto w-full max-w-[1200px] px-10 py-8">
@@ -103,6 +106,8 @@ export default function PipelinePage() {
           onNicheChange={setNiche}
           sourceGroup={sourceGroup}
           onSourceGroupChange={setSourceGroup}
+          hasWebsite={hasWebsite}
+          onHasWebsiteChange={setHasWebsite}
           niches={niches}
           sources={sources}
           totalCount={stats?.total ?? 0}
@@ -115,7 +120,7 @@ export default function PipelinePage() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-[176px] animate-pulse rounded-lg border border-border bg-surface"
+              className="h-[200px] animate-pulse rounded-lg border border-border bg-surface"
               style={{ animationDelay: `${i * 60}ms` }}
             />
           ))}

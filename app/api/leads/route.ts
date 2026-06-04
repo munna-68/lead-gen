@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getLeadsSafe } from '@/lib/db';
 
+const HAS_WEBSITE_VALUES = ['yes', 'no', 'unknown'] as const;
+type HasWebsiteFilter = (typeof HAS_WEBSITE_VALUES)[number];
+
+function parseHasWebsiteFilter(raw: string | null): HasWebsiteFilter | undefined {
+  if (!raw) return undefined;
+  if ((HAS_WEBSITE_VALUES as readonly string[]).includes(raw)) {
+    return raw as HasWebsiteFilter;
+  }
+  return undefined;
+}
+
 const Query = z.object({
   status: z
     .enum(['new', 'contacted', 'engaged', 'pitched', 'no_response', 'closed', 'dead'])
@@ -10,6 +21,7 @@ const Query = z.object({
   lead_quality: z.enum(['warm', 'cold']).optional(),
   source_group: z.string().max(200).optional(),
   search: z.string().max(200).optional(),
+  has_website: z.enum(HAS_WEBSITE_VALUES).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -20,6 +32,7 @@ export async function GET(req: NextRequest) {
     lead_quality: searchParams.get('lead_quality') || undefined,
     source_group: searchParams.get('source_group') || undefined,
     search: searchParams.get('search') || undefined,
+    has_website: parseHasWebsiteFilter(searchParams.get('has_website')),
   });
   if (!parsed.success) {
     return NextResponse.json(

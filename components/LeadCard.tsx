@@ -4,7 +4,17 @@ import { cn } from '@/lib/utils';
 import type { Lead } from '@/lib/types';
 import { QualityBadge } from '@/components/QualityBadge';
 import { StatusPill } from '@/components/StatusPill';
-import { MessagePips } from '@/components/MessagePips';
+import { MessageDots } from '@/components/MessagePips';
+import { HasWebsiteIndicator } from '@/components/HasWebsiteIndicator';
+
+function isSameEntity(lead: Lead): boolean {
+  if (!lead.business_name) return true;
+  return lead.business_name.trim().toLowerCase() === lead.name.trim().toLowerCase();
+}
+
+function firstName(full: string): string {
+  return full.trim().split(/\s+/)[0] || full;
+}
 
 export function LeadCard({
   lead,
@@ -15,6 +25,10 @@ export function LeadCard({
   onClick: () => void;
   selected?: boolean;
 }) {
+  const same = isSameEntity(lead);
+  const primary = same ? lead.name : lead.business_name || lead.name;
+  const secondary = same ? null : lead.name;
+
   return (
     <button
       type="button"
@@ -22,39 +36,50 @@ export function LeadCard({
       className={cn(
         'group flex w-full flex-col gap-3 rounded-lg border bg-surface p-5 text-left transition-colors',
         selected
-          ? 'border-accent'
+          ? 'border-accent shadow-[0_0_0_3px_hsl(var(--accent)/0.12)]'
           : 'border-border hover:border-foreground/30'
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[16px] font-semibold text-foreground">
-            {lead.business_name || lead.name}
-          </div>
-          {lead.business_name && (
-            <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
-              {lead.name}
+          {same ? (
+            <div className="truncate text-[18px] font-semibold leading-tight tracking-tight text-foreground">
+              {firstName(primary)}
             </div>
+          ) : (
+            <>
+              <div className="truncate text-[18px] font-semibold leading-tight tracking-tight text-foreground">
+                {primary}
+              </div>
+              <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
+                {secondary}
+              </div>
+            </>
           )}
         </div>
         <QualityBadge quality={lead.lead_quality} />
       </div>
 
-      <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
-        {lead.niche || '—'}
-        <span className="mx-1.5 text-border">·</span>
-        {lead.location || '—'}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {lead.niche && (
+          <span className="inline-flex items-center rounded-sm bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium leading-none text-foreground/80">
+            {lead.niche}
+          </span>
+        )}
+        {lead.location && (
+          <span className="inline-flex items-center rounded-sm bg-surface-2 px-1.5 py-0.5 font-num text-[11px] font-medium leading-none text-foreground/80">
+            {lead.location}
+          </span>
+        )}
       </div>
 
-      {lead.post_context && (
-        <p className="line-clamp-2 text-[13px] leading-relaxed text-foreground/80">
-          {lead.post_context}
-        </p>
-      )}
+      <div className="-ml-0.5">
+        <HasWebsiteIndicator value={lead.has_website} />
+      </div>
 
-      <div className="mt-1 flex items-center justify-between pt-1">
+      <div className="mt-1 flex items-center justify-between border-t border-border pt-3">
+        <MessageDots lead={lead} />
         <StatusPill status={lead.status} />
-        <MessagePips lead={lead} />
       </div>
     </button>
   );

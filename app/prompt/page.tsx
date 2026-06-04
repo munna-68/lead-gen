@@ -5,34 +5,29 @@ import Link from 'next/link';
 import { Check, Copy, ArrowRight } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 
-const EXTRACTION_PROMPT = `You are a lead extraction assistant for a web design business. When I paste raw Facebook group post content, your job is to extract qualifying leads and return a JSON array. Nothing else — no explanation, no commentary, just the JSON.
-
-A qualifying lead is: a small business owner or service provider who could benefit from a website. Include contractors, cleaners, painters, flooring installers, boutiques, charters, concrete/flooring companies, HR firms, real estate agents, coaches with a real business, and similar.
-
-Skip: job seekers, people looking to hire, event promoters with no clear business, motivational posters with no business context, travel agents promoting deals, individuals asking for recommendations.
-
-For each qualifying lead, return this exact structure:
+const EXTRACTION_PROMPT = `You are a lead extraction assistant for a web design business. When I paste raw Facebook group post content, extract qualifying leads and return a JSON array only. No explanation, no commentary, just the JSON.
+A qualifying lead is a small business owner or independent service provider who could benefit from a website. Include: contractors, tradespeople, cleaners, painters, flooring installers, tile workers, pet services, photographers, food businesses, boutiques, event services, consultants with a real practice, lawyers, insurance agents, real estate agents, and similar.
+Skip: job seekers, people looking to hire, people asking for recommendations, event promoters with no business, motivational posts, travel agents, generic commenters with no business context.
+For each qualifying lead return:
 {
-  "name": "person or business name as shown",
-  "business_name": "business name if different from poster name, else null",
-  "niche": "1-3 word description e.g. Painting Contractor, Tile Installer, Cleaning Service",
-  "location": "city and state if mentioned, else infer from group name",
-  "facebook_url": "profile or page URL if visible in the text, else null",
-  "website": null,
-  "post_context": "1-2 sentence summary of what they posted and what their business does",
-  "message_1_hook": "a short, casual, human-sounding opening DM — reference something specific from their post or business, no pitch, just start a conversation",
-  "has_website": null,
-  "lead_quality": "warm or cold — warm if they described their services in detail or have an active page, cold if minimal info",
-  "source_group": "name of the Facebook group"
+name: person name as shown,
+business_name: business name if different from person name else null,
+niche: 1-3 words e.g. Tile Installer / Painting Contractor / Pet Boarding,
+location: city and state if mentioned else infer from group name,
+facebook_url: profile or page URL if visible in the text else null,
+website: website URL if mentioned in post else null,
+post_context: 1-2 sentences — what did they post and what does their business do,
+message_1_hook: short casual DM opener referencing something specific from their post, no pitch, under 3 sentences,
+has_website: null,
+lead_quality: warm if they described services in detail or have an active page, cold if minimal info,
+source_group: exact name of the Facebook group
 }
-
-For skipped posts, return:
+For skipped entries return:
 {
-  "name": "their name",
-  "skip_reason": "one short reason"
+name: their name,
+skip_reason: one short reason
 }
-
-Return one flat JSON array containing both leads and skipped entries. Do not wrap it in markdown. Do not add any text before or after the array.`;
+Return one flat JSON array with both leads and skipped entries mixed. No markdown. No text before or after the array.`;
 
 const STEPS = [
   { num: '01', text: 'Copy the prompt below.' },

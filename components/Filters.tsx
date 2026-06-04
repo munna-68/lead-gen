@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import type { LeadQuality, LeadStatus } from '@/lib/types';
+import type { HasWebsiteFilter } from '@/lib/db';
 
 interface FiltersProps {
   search: string;
@@ -18,6 +19,8 @@ interface FiltersProps {
   onNicheChange: (v: string) => void;
   sourceGroup: string;
   onSourceGroupChange: (v: string) => void;
+  hasWebsite: HasWebsiteFilter | '';
+  onHasWebsiteChange: (v: HasWebsiteFilter | '') => void;
   niches: string[];
   sources: string[];
   totalCount: number;
@@ -37,8 +40,15 @@ const STATUS_OPTIONS: { value: LeadStatus | ''; label: string }[] = [
 
 const QUALITY_OPTIONS: { value: LeadQuality | ''; label: string }[] = [
   { value: '', label: 'All qualities' },
-  { value: 'warm', label: 'Warm' },
-  { value: 'cold', label: 'Cold' },
+  { value: 'warm', label: 'Prime Target' },
+  { value: 'cold', label: 'Low Priority' },
+];
+
+const HAS_WEBSITE_OPTIONS: { value: HasWebsiteFilter | ''; label: string }[] = [
+  { value: '', label: 'All website states' },
+  { value: 'no', label: 'No website' },
+  { value: 'yes', label: 'Has website' },
+  { value: 'unknown', label: 'Unknown' },
 ];
 
 export function Filters(props: FiltersProps) {
@@ -47,7 +57,8 @@ export function Filters(props: FiltersProps) {
     Boolean(props.status) ||
     Boolean(props.quality) ||
     Boolean(props.niche) ||
-    Boolean(props.sourceGroup);
+    Boolean(props.sourceGroup) ||
+    Boolean(props.hasWebsite);
 
   const reset = () => {
     props.onSearchChange('');
@@ -55,11 +66,12 @@ export function Filters(props: FiltersProps) {
     props.onQualityChange('');
     props.onNicheChange('');
     props.onSourceGroupChange('');
+    props.onHasWebsiteChange('');
   };
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_1fr]">
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
@@ -89,6 +101,17 @@ export function Filters(props: FiltersProps) {
           onChange={(e) => props.onQualityChange(e.target.value as LeadQuality | '')}
         >
           {QUALITY_OPTIONS.map((o) => (
+            <option key={o.value || 'all'} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={props.hasWebsite}
+          onChange={(e) => props.onHasWebsiteChange(e.target.value as HasWebsiteFilter | '')}
+        >
+          {HAS_WEBSITE_OPTIONS.map((o) => (
             <option key={o.value || 'all'} value={o.value}>
               {o.label}
             </option>

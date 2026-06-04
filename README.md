@@ -21,8 +21,8 @@ A personal CRM dashboard for managing Facebook cold outreach leads for a web des
 
 ## Features
 
-- **Pipeline dashboard** — filterable grid of leads with stats row, search, and faceted filters
-- **Lead detail panel** — slide-in side panel with the message 1 hook (click-to-copy), six-step message tracker, status dropdown, auto-saving notes, and editable website field
+- **Pipeline dashboard** — filterable grid of leads with stats row, search, and faceted filters (status, quality, has-website state, niche, source group)
+- **Lead detail panel** — slide-in side panel with four blocks: who they are, what they posted, suggested opener + Claude prompt, and the outreach progress tracker (M1 Sent → M1 Seen → M1 Replied → M2 Sent → M2 Replied → M3 Sent)
 - **Bulk import** — paste the JSON array from your AI step, validate it, then import. Skipped rows are still stored (with `skip_reason`) so you have a full audit trail. Duplicates (matched by `name` + `source_group`) are silently ignored.
 - **Skipped archive** — every lead the AI flagged with a `skip_reason` lands here for reference
 
@@ -168,7 +168,7 @@ Response:
 
 ### `GET /api/leads`
 
-Query params (all optional): `status`, `niche`, `lead_quality`, `source_group`, `search`. Skipped leads are excluded.
+Query params (all optional): `status`, `niche`, `lead_quality`, `has_website` (`yes` / `no` / `unknown`), `source_group`, `search`. Skipped leads are excluded.
 
 ### `PATCH /api/leads/[id]`
 

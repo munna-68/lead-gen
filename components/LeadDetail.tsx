@@ -1,14 +1,26 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Check } from 'lucide-react';
+import {
+  X,
+  Check,
+  Copy,
+  ExternalLink,
+  MessageSquare,
+  User,
+  FileText,
+  Sparkles,
+  ListChecks,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Lead, LeadStatus } from '@/lib/types';
 import { QualityBadge } from '@/components/QualityBadge';
 import { StatusPill } from '@/components/StatusPill';
-import { Switch } from '@/components/ui/Switch';
+import { hasWebsiteState, HasWebsiteIndicator } from '@/components/HasWebsiteIndicator';
 import { Select } from '@/components/ui/Select';
 import { Label } from '@/components/ui/Label';
+import { Textarea } from '@/components/ui/Textarea';
+import { Input } from '@/components/ui/Input';
 
 const STATUSES: LeadStatus[] = [
   'new',
@@ -20,19 +32,123 @@ const STATUSES: LeadStatus[] = [
   'dead',
 ];
 
-interface ToggleDef {
+interface StepDef {
   key: keyof Lead;
   label: string;
 }
 
-const TOGGLES: ToggleDef[] = [
+const STEPS: StepDef[] = [
   { key: 'msg1_sent', label: 'M1 Sent' },
   { key: 'msg1_seen', label: 'M1 Seen' },
-  { key: 'msg1_replied', label: 'M1 Reply' },
+  { key: 'msg1_replied', label: 'M1 Replied' },
   { key: 'msg2_sent', label: 'M2 Sent' },
-  { key: 'msg2_replied', label: 'M2 Reply' },
+  { key: 'msg2_replied', label: 'M2 Replied' },
   { key: 'msg3_sent', label: 'M3 Sent' },
 ];
+
+function hasWebsiteLabel(value: boolean | null): string {
+  if (value === true) return 'Yes';
+  if (value === false) return 'No';
+  return 'Unknown';
+}
+
+function buildClaudePrompt(lead: Lead): string {
+  const business = lead.business_name?.trim() || lead.niche?.trim() || 'not specified';
+  const location = lead.location?.trim() || 'not specified';
+  const post = lead.post_context?.trim() || 'not specified';
+  const website = lead.website?.trim() || 'not known';
+
+  return `Write a short casual Facebook DM opener for a web design cold outreach. Do not pitch anything. Just start a conversation.
+Person's name: ${lead.name}
+Business: ${business}
+Location: ${location}
+What they posted: ${post}
+Do they have a website: ${hasWebsiteLabel(lead.has_website)}
+Website if known: ${website}
+The message should reference something specific about their business or post. Keep it under 3 sentences. Conversational, not salesy.`;
+}
+
+function BlockHeader({
+  icon: Icon,
+  eyebrow,
+  title,
+  right,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  eyebrow: string;
+  title: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+        <div>
+          <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
+            {eyebrow}
+          </div>
+          <div className="text-[14px] font-semibold tracking-tight text-foreground">
+            {title}
+          </div>
+        </div>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function CopyButton({
+  text,
+  disabled,
+  className,
+}: {
+  text: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
+  const onCopy = async () => {
+    if (disabled || !text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // noop
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      disabled={disabled || !text}
+      className={cn(
+        'inline-flex h-7 items-center gap-1.5 rounded-md border border-accent px-2.5 font-num text-2xs uppercase tracking-[0.08em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50',
+        className
+      )}
+    >
+      {copied ? (
+        <>
+          <Check className="h-3 w-3" /> Copied
+        </>
+      ) : (
+        <>
+          <Copy className="h-3 w-3" /> Copy
+        </>
+      )}
+    </button>
+  );
+}
 
 export function LeadDetail({
   lead,
@@ -43,16 +159,15 @@ export function LeadDetail({
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Lead>) => Promise<void>;
 }) {
-  const [copied, setCopied] = useState(false);
   const [website, setWebsite] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
   const [notes, setNotes] = useState('');
-  const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!lead) return;
     setWebsite(lead.website || '');
+    setFacebookUrl(lead.facebook_url || '');
     setNotes(lead.notes || '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead?.id]);
 
   useEffect(() => {
@@ -69,15 +184,14 @@ export function LeadDetail({
     };
   }, [lead, onClose]);
 
-  useEffect(() => {
-    return () => {
-      if (notesTimer.current) clearTimeout(notesTimer.current);
-    };
-  }, []);
-
   if (!lead) return null;
 
-  const toggle = async (key: keyof Lead) => {
+  const same = !lead.business_name ||
+    lead.business_name.trim().toLowerCase() === lead.name.trim().toLowerCase();
+  const primaryName = lead.name;
+  const secondaryName = same ? null : lead.business_name;
+
+  const toggleStep = async (key: keyof Lead) => {
     await onUpdate(lead.id, { [key]: !lead[key] } as Partial<Lead>);
   };
 
@@ -85,33 +199,27 @@ export function LeadDetail({
     await onUpdate(lead.id, { status });
   };
 
-  const copyHook = async () => {
-    if (!lead.message_1_hook) return;
-    try {
-      await navigator.clipboard.writeText(lead.message_1_hook);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // noop
-    }
+  const setHasWebsite = async (value: boolean | null) => {
+    await onUpdate(lead.id, { has_website: value });
   };
 
-  const saveNotes = async (val: string) => {
-    if (val === lead.notes) return;
-    await onUpdate(lead.id, { notes: val });
+  const saveFacebook = async (val: string) => {
+    if (val === (lead.facebook_url || '')) return;
+    await onUpdate(lead.id, { facebook_url: val.trim() || null });
   };
 
   const saveWebsite = async (val: string) => {
     if (val === (lead.website || '')) return;
-    await onUpdate(lead.id, { website: val || null });
+    await onUpdate(lead.id, { website: val.trim() || null });
   };
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const saveNotes = async (val: string) => {
+    if (val === (lead.notes || '')) return;
+    await onUpdate(lead.id, { notes: val });
+  };
+
+  const claudePrompt = buildClaudePrompt(lead);
+  const hasWebsiteCurrent = hasWebsiteState(lead.has_website);
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -123,20 +231,24 @@ export function LeadDetail({
       <aside
         role="dialog"
         aria-label={`Lead details for ${lead.business_name || lead.name}`}
-        className="flex h-full w-full max-w-[480px] flex-col border-l border-border bg-surface animate-slide-in-right"
+        className="flex h-full w-full max-w-[620px] flex-col border-l border-border bg-surface animate-slide-in-right"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
+        <header className="flex items-start justify-between gap-4 border-b border-border px-7 py-5">
           <div className="min-w-0 flex-1">
             <div className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
-              LEAD / {lead.id.slice(0, 8).toUpperCase()}
+              LEAD · {lead.id.slice(0, 8).toUpperCase()}
             </div>
             <h2 className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-foreground">
-              {lead.business_name || lead.name}
+              {primaryName}
             </h2>
-            <div className="mt-1.5 text-[12px] text-muted-foreground">
-              {lead.niche || '—'}
-              {lead.niche && lead.location && <span className="mx-1.5 text-border">·</span>}
-              {lead.location || '—'}
+            {secondaryName && (
+              <div className="mt-1 text-[14px] text-muted-foreground">
+                {secondaryName}
+              </div>
+            )}
+            <div className="mt-3 flex items-center gap-2">
+              <QualityBadge quality={lead.lead_quality} />
+              <StatusPill status={lead.status} />
             </div>
           </div>
           <button
@@ -149,142 +261,234 @@ export function LeadDetail({
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
-          <section className="grid grid-cols-2 gap-px border-b border-border bg-border">
-            <div className="bg-surface px-6 py-4">
-              <Label className="mb-1.5 block">Status</Label>
-              <Select
-                value={lead.status}
-                onChange={(e) => changeStatus(e.target.value as LeadStatus)}
-                className="h-8"
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </option>
-                ))}
-              </Select>
-              <div className="mt-2.5">
-                <StatusPill status={lead.status} />
+        <div className="flex-1 space-y-7 overflow-y-auto px-7 py-6">
+          {/* BLOCK 1 — WHO IS THIS PERSON */}
+          <section>
+            <BlockHeader icon={User} eyebrow="Block 1" title="Who is this person" />
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <Label className="mb-1.5 block">Niche</Label>
+                  <div className="rounded-md border border-input bg-surface-2 px-3 py-2 text-[13px] text-foreground">
+                    {lead.niche || '—'}
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Location</Label>
+                  <div className="rounded-md border border-input bg-surface-2 px-3 py-2 text-[13px] text-foreground">
+                    {lead.location || '—'}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="bg-surface px-6 py-4">
-              <Label className="mb-1.5 block">Quality</Label>
-              <div className="mt-2.5">
-                <QualityBadge quality={lead.lead_quality} />
+
+              <div>
+                <Label className="mb-1.5 block">Source group</Label>
+                <div className="rounded-md border border-input bg-surface-2 px-3 py-2 text-[13px] text-foreground">
+                  {lead.source_group || '—'}
+                </div>
               </div>
-              <div className="mt-2.5 text-[12px] text-muted-foreground">
-                {lead.source_group || 'No source'}
+
+              <div>
+                <Label className="mb-1.5 block">Facebook profile</Label>
+                {lead.facebook_url ? (
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={lead.facebook_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-9 flex-1 items-center gap-1.5 truncate rounded-md border border-input bg-surface-2 px-3 text-[13px] text-foreground hover:border-foreground/30"
+                    >
+                      <span className="truncate">{lead.facebook_url}</span>
+                    </a>
+                    <a
+                      href={lead.facebook_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-accent px-3 font-num text-2xs uppercase tracking-[0.08em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      Open profile <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={facebookUrl}
+                      onChange={(e) => setFacebookUrl(e.target.value)}
+                      onBlur={(e) => saveFacebook(e.target.value)}
+                      placeholder="https://facebook.com/…"
+                      className="flex-1"
+                    />
+                  </div>
+                )}
+                {lead.facebook_url && (
+                  <Input
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    onBlur={(e) => saveFacebook(e.target.value)}
+                    placeholder="Update URL…"
+                    className="mt-2"
+                  />
+                )}
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block">Has website</Label>
+                <div className="grid grid-cols-3 overflow-hidden rounded-md border border-input">
+                  {(['unknown', 'no', 'yes'] as const).map((s, i) => {
+                    const active = hasWebsiteCurrent === s;
+                    const value: boolean | null = s === 'yes' ? true : s === 'no' ? false : null;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setHasWebsite(value)}
+                        className={cn(
+                          'px-2.5 py-2 font-num text-2xs uppercase tracking-[0.08em] transition-colors',
+                          i !== 0 && 'border-l border-input',
+                          active
+                            ? 'bg-accent text-accent-foreground'
+                            : 'bg-surface text-muted-foreground hover:bg-surface-2 hover:text-foreground'
+                        )}
+                      >
+                        {s === 'yes' ? 'Has website' : s === 'no' ? 'No website' : 'Unknown'}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2">
+                  <HasWebsiteIndicator value={lead.has_website} />
+                </div>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block">Website URL</Label>
+                <Input
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  onBlur={(e) => saveWebsite(e.target.value)}
+                  placeholder="https://…"
+                />
               </div>
             </div>
           </section>
 
-          <section className="border-b border-border px-6 py-5">
-            <Label className="mb-3 block">Message Sequence</Label>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              {TOGGLES.map((t) => {
-                const on = lead[t.key] as boolean;
+          {/* BLOCK 2 — WHAT DID THEY POST */}
+          {lead.post_context && (
+            <section>
+              <BlockHeader icon={FileText} eyebrow="Block 2" title="Their post" />
+              <blockquote className="rounded-md border border-input bg-surface-2 px-4 py-3 text-[13.5px] leading-relaxed text-foreground">
+                {lead.post_context}
+              </blockquote>
+            </section>
+          )}
+
+          {/* BLOCK 3 — MESSAGE 1 */}
+          <section>
+            <BlockHeader
+              icon={MessageSquare}
+              eyebrow="Block 3"
+              title="Suggested opener"
+              right={
+                <CopyButton text={lead.message_1_hook} disabled={!lead.message_1_hook} />
+              }
+            />
+            <div className="rounded-md border border-input bg-surface-2 px-4 py-3 text-[14px] leading-relaxed text-foreground">
+              {lead.message_1_hook || (
+                <span className="italic text-muted-foreground">
+                  No opener generated yet.
+                </span>
+              )}
+            </div>
+
+            <div className="mt-5">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden />
+                  <Label>Claude prompt</Label>
+                </div>
+                <CopyButton text={claudePrompt} />
+              </div>
+              <p className="mb-2 text-[12px] text-muted-foreground">
+                Copy this into Claude if you want a stronger Message 1.
+              </p>
+              <pre className="max-h-[280px] overflow-y-auto whitespace-pre-wrap rounded-md border border-input bg-surface-2 px-4 py-3 font-num text-[12.5px] leading-relaxed text-foreground/90">
+                {claudePrompt}
+              </pre>
+            </div>
+          </section>
+
+          {/* BLOCK 4 — OUTREACH PROGRESS */}
+          <section>
+            <BlockHeader icon={ListChecks} eyebrow="Block 4" title="Outreach progress" />
+
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {STEPS.map((step) => {
+                const done = lead[step.key] as boolean;
                 return (
-                  <div key={t.key} className="flex items-center justify-between">
-                    <span className="text-[13px] text-foreground">{t.label}</span>
-                    <Switch
-                      checked={on}
-                      onCheckedChange={() => toggle(t.key)}
-                      aria-label={t.label}
-                    />
-                  </div>
+                  <button
+                    key={step.key}
+                    type="button"
+                    onClick={() => toggleStep(step.key)}
+                    aria-pressed={done}
+                    aria-label={step.label}
+                    title={step.label}
+                    className={cn(
+                      'inline-flex h-9 items-center justify-center rounded-md border px-1.5 font-num text-[10.5px] font-semibold uppercase tracking-[0.04em] transition-colors',
+                      done
+                        ? 'border-accent bg-accent text-accent-foreground'
+                        : 'border-input bg-surface text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+                    )}
+                  >
+                    {step.label}
+                  </button>
                 );
               })}
             </div>
-          </section>
 
-          <section className="border-b border-border px-6 py-5">
-            <div className="mb-2.5 flex items-center justify-between">
-              <Label>Message 1 Hook</Label>
-              <button
-                type="button"
-                onClick={copyHook}
-                disabled={!lead.message_1_hook}
-                className="inline-flex items-center gap-1.5 font-num text-2xs uppercase tracking-[0.08em] text-accent transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-3 w-3" /> Copied
-                  </>
-                ) : (
-                  'Click to copy'
-                )}
-              </button>
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label className="mb-1.5 block">Status</Label>
+                <Select
+                  value={lead.status}
+                  onChange={(e) => changeStatus(e.target.value as LeadStatus)}
+                  className="h-9"
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </option>
+                  ))}
+                </Select>
+                <div className="mt-2.5">
+                  <StatusPill status={lead.status} />
+                </div>
+              </div>
+              <div>
+                <Label className="mb-1.5 block">Quality</Label>
+                <div className="h-9 rounded-md border border-input bg-surface-2 px-3 flex items-center">
+                  <QualityBadge quality={lead.lead_quality} />
+                </div>
+              </div>
             </div>
-            <blockquote
-              onClick={copyHook}
-              className={cn(
-                'cursor-pointer border-l-2 border-border bg-surface-2 px-4 py-3 text-[14px] leading-relaxed text-foreground transition-colors',
-                'hover:border-foreground/40',
-                !lead.message_1_hook && 'italic text-muted-foreground'
-              )}
-            >
-              {lead.message_1_hook || 'No hook generated yet.'}
-            </blockquote>
-          </section>
 
-          {lead.post_context && (
-            <section className="border-b border-border px-6 py-5">
-              <Label className="mb-2.5 block">Post Context</Label>
-              <p className="text-[13px] leading-relaxed text-foreground/90">{lead.post_context}</p>
-            </section>
-          )}
-
-          {lead.facebook_url && (
-            <section className="border-b border-border px-6 py-4">
-              <Label className="mb-1.5 block">Facebook</Label>
-              <a
-                href={lead.facebook_url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[13px] text-accent hover:underline"
-              >
-                {lead.facebook_url}
-              </a>
-            </section>
-          )}
-
-          <section className="border-b border-border px-6 py-5">
-            <Label className="mb-2.5 block">Website</Label>
-            <input
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              onBlur={(e) => saveWebsite(e.target.value)}
-              placeholder="https://…"
-              className="h-9 w-full rounded-md border border-input bg-surface px-3 text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
-            />
-          </section>
-
-          <section className="px-6 py-5">
-            <div className="mb-2.5 flex items-center justify-between">
-              <Label>Notes</Label>
-              <span className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
-                Auto-saves
-              </span>
+            <div className="mt-5">
+              <div className="mb-1.5 flex items-center justify-between">
+                <Label>Notes</Label>
+                <span className="font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
+                  Auto-saves on blur
+                </span>
+              </div>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={(e) => saveNotes(e.target.value)}
+                rows={4}
+                placeholder="Conversation log, follow-up cadence, deal size…"
+              />
             </div>
-            <textarea
-              value={notes}
-              onChange={(e) => {
-                setNotes(e.target.value);
-                if (notesTimer.current) clearTimeout(notesTimer.current);
-                notesTimer.current = setTimeout(() => saveNotes(e.target.value), 700);
-              }}
-              rows={4}
-              placeholder="Conversation log, follow-up cadence, deal size…"
-              className="w-full resize-none rounded-md border border-input bg-surface p-3 text-[13px] leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
-            />
           </section>
         </div>
-
-        <footer className="flex items-center justify-between border-t border-border px-6 py-3 font-num text-2xs uppercase tracking-[0.08em] text-muted-foreground">
-          <span>ADDED {formatDate(lead.created_at)}</span>
-          <span>UPDATED {formatDate(lead.updated_at)}</span>
-        </footer>
       </aside>
     </div>
   );

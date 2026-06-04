@@ -24,7 +24,7 @@ export function Sidebar() {
               LeadFlow
             </div>
             <div className="mt-0.5 font-num text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
-              v0.1 · personal crm
+              v0.3 · personal crm
             </div>
           </Link>
           <ThemeToggle />
