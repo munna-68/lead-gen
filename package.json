@@ -15,7 +15,7 @@
     "db:setup": "tsx scripts/setup-db.ts"
   },
   "dependencies": {
-    "@vercel/postgres": "^0.10.0",
+    "@neondatabase/serverless": "^0.10.4",
     "clsx": "^2.1.1",
     "motion": "^12.40.0",
     "next": "^15.5.18",
@@ -36,7 +36,6 @@
     "typescript": "^5.7.3"
   },
   "overrides": {
-    "framer-motion": "npm:motion@^12.40.0",
     "eslint-visitor-keys": "^4.2.1"
   }
 }

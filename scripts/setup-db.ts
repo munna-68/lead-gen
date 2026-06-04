@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
 
 const STATEMENTS = [
   `CREATE EXTENSION IF NOT EXISTS "pgcrypto"`,
@@ -38,11 +38,11 @@ async function main() {
     console.error('Missing POSTGRES_URL. Set it in .env.local or your environment.');
     process.exit(1);
   }
-  process.env.POSTGRES_URL = url;
+  const sql = neon(url);
 
   for (const stmt of STATEMENTS) {
     process.stdout.write('→ executing migration... ');
-    await sql.query(stmt);
+    await sql(stmt, []);
     process.stdout.write('ok\n');
   }
   console.log('\n✓ Database ready.');

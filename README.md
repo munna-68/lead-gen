@@ -7,12 +7,14 @@ A personal CRM dashboard for managing Facebook cold outreach leads for a web des
 ## Stack
 
 - **Framework:** Next.js 15 (App Router) + React 19
-- **Database:** Vercel Postgres (`@vercel/postgres`)
+- **Database:** [Neon](https://neon.com) Postgres (via `@neondatabase/serverless`)
 - **Styling:** Tailwind CSS
 - **Motion:** [`motion`](https://motion.dev) (the modern, actively-maintained successor to `framer-motion`)
 - **Validation:** [Zod](https://zod.dev) for runtime input validation on all API routes
 - **Language:** TypeScript
 
+> **Why Neon, not `@vercel/postgres`?** Vercel deprecated the `@vercel/postgres` package in 2026 and migrated existing databases to Neon under the hood. New deployments should set up Neon directly from the Vercel Marketplace and use the `@neondatabase/serverless` SDK — that's what this project uses.
+>
 > **Why these versions?** As of May 2026, Next.js <15.5.18 has 13 unpatched CVEs (middleware/auth bypass, XSS, SSRF, cache poisoning, DoS). The 14.x line will not receive backports. `next@^15.5.18` ships with all current security fixes.
 >
 > `framer-motion` is in maintenance mode; the same library is now published as `motion` and is imported from `motion/react` for the React API.
@@ -63,11 +65,12 @@ A personal CRM dashboard for managing Facebook cold outreach leads for a web des
    npm install
    ```
 
-3. **Create a Vercel Postgres database**
+3. **Create a Neon Postgres database**
 
    - Open the [Vercel dashboard](https://vercel.com/dashboard)
-   - Go to **Storage → Create Database → Postgres**
-   - Copy the `POSTGRES_URL` connection string
+   - Go to **Storage → Marketplace → Neon → Add Integration**
+   - Create a new Neon project (or link an existing one)
+   - Vercel auto-injects `POSTGRES_URL` into your project's environment variables. If you'd rather set it manually, copy the connection string from the Neon dashboard.
 
 4. **Add env variables**
 
@@ -113,11 +116,15 @@ A personal CRM dashboard for managing Facebook cold outreach leads for a web des
 ## Deployment to Vercel
 
 1. Push the repo to GitHub and import it into Vercel
-2. In the Vercel project, go to **Settings → Environment Variables**
-3. Add `POSTGRES_URL` with the same value from your Vercel Postgres database
-4. Deploy
+2. In the Vercel project, install the **Neon** integration (Storage → Marketplace → Neon). Vercel will auto-inject `POSTGRES_URL` into the project's environment variables.
+3. Deploy
 
-The build will run automatically. If this is the first deploy, run `npm run db:setup` locally once (or via `vercel env pull` + `npx tsx scripts/setup-db.ts`) to create the table.
+The build will run automatically. On first deploy, the `leads` table is created the first time `scripts/setup-db.ts` runs — run it once locally against your Neon database, or add a one-off Vercel build step:
+
+```bash
+vercel env pull .env.local
+npm run db:setup
+```
 
 ## API reference
 

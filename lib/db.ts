@@ -1,9 +1,18 @@
-import { sql } from '@vercel/postgres';
+import { neon, neonConfig } from '@neondatabase/serverless';
 import type { Lead, LeadStatus, LeadQuality } from './types';
 
+neonConfig.fetchConnectionCache = true;
+
+function client() {
+  const url = process.env.POSTGRES_URL;
+  if (!url) throw new Error('POSTGRES_URL is not set');
+  return neon(url);
+}
+
 export async function getLeadById(id: string): Promise<Lead | null> {
-  const result = await sql<Lead>`SELECT * FROM leads WHERE id = ${id}`;
-  return (result.rows[0] as Lead) || null;
+  const sql = client();
+  const rows = await sql`SELECT * FROM leads WHERE id = ${id}`;
+  return (rows[0] as Lead) || null;
 }
 
 export async function getLeadsSafe(filters?: {
@@ -13,6 +22,7 @@ export async function getLeadsSafe(filters?: {
   source_group?: string;
   search?: string;
 }): Promise<Lead[]> {
+  const sql = client();
   const where: string[] = ['skip_reason IS NULL'];
   const args: (string | number)[] = [];
 
@@ -32,59 +42,47 @@ export async function getLeadsSafe(filters?: {
   }
 
   const query = `SELECT * FROM leads WHERE ${where.join(' AND ')} ORDER BY created_at DESC`;
-  const result = await sql.query(query, args);
-  return result.rows as Lead[];
+  const rows = await sql(query, args);
+  return rows as Lead[];
 }
 
 export async function getSkippedLeads(): Promise<Lead[]> {
-  const result = await sql<Lead>`
+  const sql = client();
+  const rows = await sql`
     SELECT * FROM leads WHERE skip_reason IS NOT NULL ORDER BY created_at DESC
   `;
-  return result.rows as Lead[];
+  return rows as Lead[];
 }
 
 export async function getStats() {
-  const total = await sql<{ count: string }>`
-    SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL
-  `;
-  const warm = await sql<{ count: string }>`
-    SELECT COUNT(*)::text as count FROM leads
-    WHERE skip_reason IS NULL AND lead_quality = 'warm'
-  `;
-  const contacted = await sql<{ count: string }>`
-    SELECT COUNT(*)::text as count FROM leads
-    WHERE skip_reason IS NULL AND status = 'contacted'
-  `;
-  const replied = await sql<{ count: string }>`
-    SELECT COUNT(*)::text as count FROM leads
-    WHERE skip_reason IS NULL AND (msg1_replied = true OR msg2_replied = true)
-  `;
-  const pitched = await sql<{ count: string }>`
-    SELECT COUNT(*)::text as count FROM leads
-    WHERE skip_reason IS NULL AND status = 'pitched'
-  `;
-  const closed = await sql<{ count: string }>`
-    SELECT COUNT(*)::text as count FROM leads
-    WHERE skip_reason IS NULL AND status = 'closed'
-  `;
+  const sql = client();
+  const [total, warm, contacted, replied, pitched, closed] = await Promise.all([
+    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL`,
+    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND lead_quality = 'warm'`,
+    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'contacted'`,
+    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND (msg1_replied = true OR msg2_replied = true)`,
+    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'pitched'`,
+    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'closed'`,
+  ]);
 
   return {
-    total: parseInt(total.rows[0]?.count || '0', 10),
-    warm: parseInt(warm.rows[0]?.count || '0', 10),
-    contacted: parseInt(contacted.rows[0]?.count || '0', 10),
-    replied: parseInt(replied.rows[0]?.count || '0', 10),
-    pitched: parseInt(pitched.rows[0]?.count || '0', 10),
-    closed: parseInt(closed.rows[0]?.count || '0', 10),
+    total: parseInt(total[0]?.count || '0', 10),
+    warm: parseInt(warm[0]?.count || '0', 10),
+    contacted: parseInt(contacted[0]?.count || '0', 10),
+    replied: parseInt(replied[0]?.count || '0', 10),
+    pitched: parseInt(pitched[0]?.count || '0', 10),
+    closed: parseInt(closed[0]?.count || '0', 10),
   };
 }
 
 export async function findDuplicate(name: string, source_group: string): Promise<boolean> {
-  const result = await sql`
+  const sql = client();
+  const rows = await sql`
     SELECT id FROM leads
     WHERE name = ${name} AND source_group = ${source_group}
     LIMIT 1
   `;
-  return result.rows.length > 0;
+  return rows.length > 0;
 }
 
 export async function bulkInsertLeads(
@@ -105,7 +103,7 @@ export async function bulkInsertLeads(
 ): Promise<number> {
   if (leads.length === 0) return 0;
 
-  let inserted = 0;
+  const sql = client();
   for (const lead of leads) {
     await sql`
       INSERT INTO leads (
@@ -126,9 +124,8 @@ export async function bulkInsertLeads(
         ${lead.skip_reason}
       )
     `;
-    inserted++;
   }
-  return inserted;
+  return leads.length;
 }
 
 export async function updateLead(
@@ -139,14 +136,15 @@ export async function updateLead(
     (k) => k !== 'id' && k !== 'created_at'
   );
   if (fields.length === 0) {
-    const r = await sql<Lead>`SELECT * FROM leads WHERE id = ${id}`;
-    return r.rows[0] || null;
+    const sql = client();
+    const rows = await sql`SELECT * FROM leads WHERE id = ${id}`;
+    return (rows[0] as Lead) || null;
   }
 
+  const sql = client();
   const setClauses = fields
     .map((field, i) => `${field} = $${i + 2}`)
     .join(', ');
-
   const values = fields.map((f) => (updates as Record<string, unknown>)[f]);
 
   const query = `
@@ -155,7 +153,6 @@ export async function updateLead(
     WHERE id = $1
     RETURNING *
   `;
-
-  const result = await sql.query(query, [id, ...values]);
-  return (result.rows[0] as Lead) || null;
+  const rows = await sql(query, [id, ...values]);
+  return (rows[0] as Lead) || null;
 }
