@@ -9,13 +9,34 @@ export const maxDuration = 60;
 const MAX_LEADS = 5000;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
+// Accepts null/undefined/empty, or a URL-like string with or without protocol.
+// "www.example.com" and "example.com" both pass; "not a url" and "abc" don't.
+const URLish = z
+  .string()
+  .max(500)
+  .nullable()
+  .optional()
+  .refine(
+    (val) => {
+      if (val === null || val === undefined || val === '') return true;
+      const normalized = /^https?:\/\//i.test(val) ? val : `https://${val}`;
+      try {
+        new URL(normalized);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Invalid URL' }
+  );
+
 const FullLeadInput = z.object({
   name: z.string().min(1).max(200),
   business_name: z.string().max(200).nullable().optional(),
   niche: z.string().max(120).optional().default(''),
   location: z.string().max(160).optional().default(''),
-  facebook_url: z.string().url().max(500).nullable().optional(),
-  website: z.string().url().max(500).nullable().optional(),
+  facebook_url: URLish,
+  website: URLish,
   has_website: z.boolean().nullable().optional(),
   post_context: z.string().max(4000).optional().default(''),
   message_1_hook: z.string().max(2000).optional().default(''),
@@ -39,6 +60,11 @@ const Body = z.union([
   z.object({ leads: z.array(Entry).max(MAX_LEADS) }),
 ]);
 
+function normalizeUrl(val: string | null | undefined): string | null {
+  if (!val) return null;
+  return /^https?:\/\//i.test(val) ? val : `https://${val}`;
+}
+
 function isSkipped(
   e: z.infer<typeof Entry>
 ): e is z.infer<typeof SkippedLeadInput> {
@@ -46,19 +72,17 @@ function isSkipped(
 }
 
 function normalizeFull(l: z.infer<typeof FullLeadInput>) {
+  const facebook_url = normalizeUrl(l.facebook_url);
+  const website = normalizeUrl(l.website);
   return {
     name: l.name.trim(),
     business_name: l.business_name?.trim() || null,
     niche: (l.niche || '').trim(),
     location: (l.location || '').trim(),
-    facebook_url: l.facebook_url?.trim() || null,
-    website: l.website?.trim() || null,
+    facebook_url,
+    website,
     has_website:
-      typeof l.has_website === 'boolean'
-        ? l.has_website
-        : l.website
-        ? true
-        : null,
+      typeof l.has_website === 'boolean' ? l.has_website : website ? true : null,
     post_context: l.post_context || '',
     message_1_hook: l.message_1_hook || '',
     lead_quality: l.lead_quality as LeadQuality,
