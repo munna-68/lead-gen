@@ -57,13 +57,13 @@ export async function getSkippedLeads(): Promise<Lead[]> {
 export async function getStats() {
   const sql = client();
   const [total, warm, contacted, replied, pitched, closed] = await Promise.all([
-    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL`,
-    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND lead_quality = 'warm'`,
-    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'contacted'`,
-    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND (msg1_replied = true OR msg2_replied = true)`,
-    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'pitched'`,
-    sql<{ count: string }>`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'closed'`,
-  ]);
+    sql`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL`,
+    sql`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND lead_quality = 'warm'`,
+    sql`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'contacted'`,
+    sql`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND (msg1_replied = true OR msg2_replied = true)`,
+    sql`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'pitched'`,
+    sql`SELECT COUNT(*)::text as count FROM leads WHERE skip_reason IS NULL AND status = 'closed'`,
+  ]) as Array<Array<{ count: string }>>;
 
   return {
     total: parseInt(total[0]?.count || '0', 10),
