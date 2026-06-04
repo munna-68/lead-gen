@@ -75,6 +75,15 @@ export default function PipelinePage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setLeads((prev) => prev.filter((l) => l.id !== id));
+      if (selectedId === id) setSelectedId(null);
+      fetchStats();
+    }
+  };
+
   const selected = selectedId ? leads.find((l) => l.id === selectedId) || null : null;
   const hasFilters = Boolean(search || status || quality || niche || sourceGroup || hasWebsite);
 
@@ -146,12 +155,18 @@ export default function PipelinePage() {
               lead={lead}
               selected={lead.id === selectedId}
               onClick={() => setSelectedId(lead.id)}
+              onDelete={handleDelete}
             />
           ))}
         </div>
       )}
 
-      <LeadDetail lead={selected} onClose={() => setSelectedId(null)} onUpdate={handleUpdate} />
+      <LeadDetail
+        lead={selected}
+        onClose={() => setSelectedId(null)}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }

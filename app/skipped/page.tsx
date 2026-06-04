@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Archive } from 'lucide-react';
+import { Archive, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Lead } from '@/lib/types';
 
 export default function SkippedPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch('/api/leads/skipped')
@@ -23,11 +26,37 @@ export default function SkippedPage() {
       day: 'numeric',
     });
 
+  const handleClearAll = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/leads/skipped', { method: 'DELETE' });
+      if (res.ok) {
+        setLeads([]);
+        setConfirmOpen(false);
+      }
+    } catch {
+      // swallow
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-[960px] px-10 py-8">
       <PageHeader
         title="Skipped"
         subtitle="Every lead the AI extraction flagged with a skip_reason, kept for reference."
+        action={
+          !loading && leads.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-danger bg-danger px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Clear All Skipped
+            </button>
+          ) : undefined
+        }
       />
 
       {loading ? (
@@ -94,6 +123,25 @@ export default function SkippedPage() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(o) => !deleting && setConfirmOpen(o)}
+        title="Clear all skipped leads?"
+        description={
+          <>
+            This will permanently delete{' '}
+            <span className="font-semibold text-foreground">
+              {leads.length.toString().padStart(2, '0')}
+            </span>{' '}
+            skipped {leads.length === 1 ? 'record' : 'records'}. This cannot be undone.
+          </>
+        }
+        confirmLabel="Clear all"
+        destructive
+        busy={deleting}
+        onConfirm={handleClearAll}
+      />
     </div>
   );
 }

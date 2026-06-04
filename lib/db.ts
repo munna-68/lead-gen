@@ -235,3 +235,15 @@ export async function updateLead(
   const rows = await sql(query, [id, ...values]);
   return (rows[0] as Lead) || null;
 }
+
+export async function deleteLead(id: string): Promise<boolean> {
+  const sql = client();
+  const rows = await sql`DELETE FROM leads WHERE id = ${id} RETURNING id`;
+  return rows.length > 0;
+}
+
+export async function deleteAllSkippedLeads(): Promise<number> {
+  const sql = client();
+  const rows = await sql`DELETE FROM leads WHERE skip_reason IS NOT NULL RETURNING id`;
+  return rows.length;
+}

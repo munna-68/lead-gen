@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getLeadById, updateLead } from '@/lib/db';
+import { deleteLead, getLeadById, updateLead } from '@/lib/db';
 import type { Lead } from '@/lib/types';
 
 const PATCHABLE = z
@@ -79,6 +79,26 @@ export async function GET(
     const lead = await getLeadById(id);
     if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ lead });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  if (!UUID_RE.test(id)) {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
+  try {
+    const removed = await deleteLead(id);
+    if (!removed) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

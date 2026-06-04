@@ -11,6 +11,7 @@ import {
   FileText,
   Sparkles,
   ListChecks,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Lead, LeadStatus } from '@/lib/types';
@@ -21,6 +22,7 @@ import { Select } from '@/components/ui/Select';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Input } from '@/components/ui/Input';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const STATUSES: LeadStatus[] = [
   'new',
@@ -154,25 +156,33 @@ export function LeadDetail({
   lead,
   onClose,
   onUpdate,
+  onDelete,
 }: {
   lead: Lead | null;
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Lead>) => Promise<void>;
+  onDelete: (id: string) => Promise<void> | void;
 }) {
   const [website, setWebsite] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
   const [notes, setNotes] = useState('');
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!lead) return;
     setWebsite(lead.website || '');
     setFacebookUrl(lead.facebook_url || '');
     setNotes(lead.notes || '');
+    setConfirmDeleteOpen(false);
   }, [lead?.id]);
 
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (confirmDeleteOpen) return;
+        onClose();
+      }
     }
     if (lead) {
       document.addEventListener('keydown', onEsc);
@@ -182,7 +192,7 @@ export function LeadDetail({
       document.removeEventListener('keydown', onEsc);
       document.body.style.overflow = '';
     };
-  }, [lead, onClose]);
+  }, [lead, onClose, confirmDeleteOpen]);
 
   if (!lead) return null;
 
@@ -216,6 +226,16 @@ export function LeadDetail({
   const saveNotes = async (val: string) => {
     if (val === (lead.notes || '')) return;
     await onUpdate(lead.id, { notes: val });
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(lead.id);
+      setConfirmDeleteOpen(false);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const claudePrompt = buildClaudePrompt(lead);
@@ -291,45 +311,25 @@ export function LeadDetail({
 
               <div>
                 <Label className="mb-1.5 block">Facebook profile</Label>
-                {lead.facebook_url ? (
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={lead.facebook_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-9 flex-1 items-center gap-1.5 truncate rounded-md border border-input bg-surface-2 px-3 text-[13px] text-foreground hover:border-foreground/30"
-                    >
-                      <span className="truncate">{lead.facebook_url}</span>
-                    </a>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    onBlur={(e) => saveFacebook(e.target.value)}
+                    placeholder="Paste profile URL here"
+                    className="flex-1"
+                  />
+                  {lead.facebook_url && (
                     <a
                       href={lead.facebook_url}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-accent px-3 font-num text-2xs uppercase tracking-[0.08em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
-                      Open profile <ExternalLink className="h-3 w-3" />
+                      Open <ExternalLink className="h-3 w-3" />
                     </a>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={facebookUrl}
-                      onChange={(e) => setFacebookUrl(e.target.value)}
-                      onBlur={(e) => saveFacebook(e.target.value)}
-                      placeholder="https://facebook.com/…"
-                      className="flex-1"
-                    />
-                  </div>
-                )}
-                {lead.facebook_url && (
-                  <Input
-                    value={facebookUrl}
-                    onChange={(e) => setFacebookUrl(e.target.value)}
-                    onBlur={(e) => saveFacebook(e.target.value)}
-                    placeholder="Update URL…"
-                    className="mt-2"
-                  />
-                )}
+                  )}
+                </div>
               </div>
 
               <div>
@@ -488,8 +488,29 @@ export function LeadDetail({
               />
             </div>
           </section>
+
+          <section className="border-t border-border pt-6">
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteOpen(true)}
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-danger bg-danger/5 px-4 text-[13px] font-medium text-danger transition-colors hover:bg-danger hover:text-white"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete Lead
+            </button>
+          </section>
         </div>
       </aside>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={(o) => !deleting && setConfirmDeleteOpen(o)}
+        title={`Delete ${lead.name}?`}
+        description="This will permanently remove the lead from the database. This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        busy={deleting}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
