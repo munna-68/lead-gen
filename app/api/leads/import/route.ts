@@ -9,7 +9,7 @@ export const maxDuration = 60;
 const MAX_LEADS = 5000;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
-const LeadInput = z.object({
+const FullLeadInput = z.object({
   name: z.string().min(1).max(200),
   business_name: z.string().max(200).nullable().optional(),
   niche: z.string().max(120).optional().default(''),
@@ -24,12 +24,28 @@ const LeadInput = z.object({
   skip_reason: z.string().max(500).nullable().optional(),
 });
 
+const SkippedLeadInput = z.object({
+  name: z.string().min(1).max(200),
+  skip_reason: z.string().min(1).max(500),
+});
+
+// Mixed array: qualifying leads and skipped entries can be interleaved.
+// A non-empty skip_reason means the entry is a skipped record; otherwise
+// it must satisfy the full lead schema.
+const Entry = z.union([FullLeadInput, SkippedLeadInput]);
+
 const Body = z.union([
-  z.array(LeadInput).max(MAX_LEADS),
-  z.object({ leads: z.array(LeadInput).max(MAX_LEADS) }),
+  z.array(Entry).max(MAX_LEADS),
+  z.object({ leads: z.array(Entry).max(MAX_LEADS) }),
 ]);
 
-function normalize(l: z.infer<typeof LeadInput>) {
+function isSkipped(
+  e: z.infer<typeof Entry>
+): e is z.infer<typeof SkippedLeadInput> {
+  return typeof e.skip_reason === 'string' && e.skip_reason.trim().length > 0;
+}
+
+function normalizeFull(l: z.infer<typeof FullLeadInput>) {
   return {
     name: l.name.trim(),
     business_name: l.business_name?.trim() || null,
@@ -48,6 +64,23 @@ function normalize(l: z.infer<typeof LeadInput>) {
     lead_quality: l.lead_quality as LeadQuality,
     source_group: l.source_group.trim(),
     skip_reason: l.skip_reason?.trim() || null,
+  };
+}
+
+function normalizeSkipped(l: z.infer<typeof SkippedLeadInput>) {
+  return {
+    name: l.name.trim(),
+    business_name: null,
+    niche: '',
+    location: '',
+    facebook_url: null,
+    website: null,
+    has_website: null,
+    post_context: '',
+    message_1_hook: '',
+    lead_quality: 'cold' as LeadQuality,
+    source_group: '',
+    skip_reason: l.skip_reason.trim(),
   };
 }
 
@@ -80,11 +113,12 @@ export async function POST(req: NextRequest) {
     errors: [],
   };
 
-  const toInsert: ReturnType<typeof normalize>[] = [];
+  const toInsert: ReturnType<typeof normalizeFull | typeof normalizeSkipped>[] = [];
   const seenInBatch = new Set<string>();
 
   for (let i = 0; i < items.length; i++) {
-    const lead = normalize(items[i]);
+    const item = items[i];
+    const lead = isSkipped(item) ? normalizeSkipped(item) : normalizeFull(item);
 
     const dedupeKey = `${lead.name}::${lead.source_group}`;
     if (seenInBatch.has(dedupeKey)) {
@@ -99,6 +133,8 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // source_group is required for qualifying leads (enforced by FullLeadInput).
+    // Skipped entries skip the duplicate check because they have no source_group.
     const isDup = await findDuplicate(lead.name, lead.source_group);
     if (isDup) {
       result.duplicates++;
