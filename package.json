@@ -12,7 +12,7 @@
     "lint": "next lint",
     "audit": "npm audit --omit=dev",
     "audit:fix": "npm audit fix",
-    "db:setup": "tsx scripts/setup-db.ts"
+    "db:setup": "tsx --env-file=.env.local scripts/setup-db.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

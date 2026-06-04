@@ -4,9 +4,54 @@ import type { Lead, LeadStatus, LeadQuality } from './types';
 neonConfig.fetchConnectionCache = true;
 
 function client() {
-  const url = process.env.POSTGRES_URL;
-  if (!url) throw new Error('POSTGRES_URL is not set');
+  const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (!url) throw new Error('POSTGRES_URL (or DATABASE_URL) is not set');
   return neon(url);
+}
+
+let schemaReady: Promise<void> | null = null;
+
+export async function ensureSchema(): Promise<void> {
+  if (schemaReady) return schemaReady;
+  schemaReady = (async () => {
+    const sql = client();
+    await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`, []);
+    await sql(
+      `CREATE TABLE IF NOT EXISTS leads (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        business_name TEXT,
+        niche TEXT NOT NULL DEFAULT '',
+        location TEXT NOT NULL DEFAULT '',
+        facebook_url TEXT,
+        website TEXT,
+        has_website BOOLEAN,
+        post_context TEXT NOT NULL DEFAULT '',
+        message_1_hook TEXT NOT NULL DEFAULT '',
+        lead_quality TEXT NOT NULL DEFAULT 'cold' CHECK (lead_quality IN ('warm','cold')),
+        source_group TEXT NOT NULL DEFAULT '',
+        skip_reason TEXT,
+        status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','contacted','engaged','pitched','no_response','closed','dead')),
+        msg1_sent BOOLEAN NOT NULL DEFAULT false,
+        msg1_seen BOOLEAN NOT NULL DEFAULT false,
+        msg1_replied BOOLEAN NOT NULL DEFAULT false,
+        msg2_sent BOOLEAN NOT NULL DEFAULT false,
+        msg2_replied BOOLEAN NOT NULL DEFAULT false,
+        msg3_sent BOOLEAN NOT NULL DEFAULT false,
+        notes TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      []
+    );
+    await sql(`CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`, []);
+    await sql(`CREATE INDEX IF NOT EXISTS idx_leads_skip_reason ON leads(skip_reason)`, []);
+    await sql(
+      `CREATE INDEX IF NOT EXISTS idx_leads_name_source ON leads(name, source_group)`,
+      []
+    );
+  })();
+  return schemaReady;
 }
 
 export async function getLeadById(id: string): Promise<Lead | null> {

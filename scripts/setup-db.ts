@@ -33,9 +33,9 @@ const STATEMENTS = [
 ];
 
 async function main() {
-  const url = process.env.POSTGRES_URL;
+  const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;
   if (!url) {
-    console.error('Missing POSTGRES_URL. Set it in .env.local or your environment.');
+    console.error('Missing POSTGRES_URL (or DATABASE_URL). Set it in .env.local or your environment.');
     process.exit(1);
   }
   const sql = neon(url);

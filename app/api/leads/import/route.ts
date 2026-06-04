@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { bulkInsertLeads, findExistingLeads, InsertableLead } from '@/lib/db';
+import { bulkInsertLeads, ensureSchema, findExistingLeads, InsertableLead } from '@/lib/db';
 import type { ImportResult, LeadQuality } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -179,6 +179,7 @@ async function handlePost(req: NextRequest) {
   // Single DB round trip to find which of the qualifying leads already exist.
   let existing: Set<string>;
   try {
+    await ensureSchema();
     existing = await findExistingLeads(toCheckInDb);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown DB error';
